@@ -1,0 +1,91 @@
+import http from '@/utils/http'
+
+const BASE_URL = '/education/teacher'
+
+export interface TeacherResp {
+  id: string
+  name: string
+  teacherNo: string
+  score: string
+  tags: string
+  gender: string
+  isShow: string
+  isFixed: string
+  phone: string
+  email: string
+  headImg: string
+  audioUrl: string
+  videoUrl: string
+  briefIntro: string
+  description: string
+  sort: string
+  status: string
+  createTime: string
+  updateTime: string
+  createUserString: string
+  updateUserString: string
+  disabled: boolean
+}
+export interface TeacherDetailResp {
+  id: string
+  name: string
+  teacherNo: string
+  score: string
+  tags: string
+  gender: string
+  isShow: string
+  isFixed: string
+  phone: string
+  email: string
+  headImg: string
+  audioUrl: string
+  videoUrl: string
+  briefIntro: string
+  description: string
+  sort: string
+  status: string
+  createTime: string
+  updateTime: string
+  createUser: string
+  updateUser: string
+  createUserString: string
+  updateUserString: string
+}
+export interface TeacherQuery {
+  name: string | undefined
+  teacherNo: string | undefined
+  isShow: string | undefined
+  sort: string | undefined
+  sort: Array<string>
+}
+export interface TeacherPageQuery extends TeacherQuery, PageQuery {}
+
+/** @desc 查询教师列表 */
+export function listTeacher(query: TeacherPageQuery) {
+  return http.get<PageRes<TeacherResp[]>>(`${BASE_URL}`, query)
+}
+
+/** @desc 查询教师详情 */
+export function getTeacher(id: string) {
+  return http.get<TeacherDetailResp>(`${BASE_URL}/${id}`)
+}
+
+/** @desc 新增教师 */
+export function addTeacher(data: any) {
+  return http.post(`${BASE_URL}`, data)
+}
+
+/** @desc 修改教师 */
+export function updateTeacher(data: any, id: string) {
+  return http.put(`${BASE_URL}/${id}`, data)
+}
+
+/** @desc 删除教师 */
+export function deleteTeacher(id: string) {
+  return http.del(`${BASE_URL}/${id}`)
+}
+
+/** @desc 导出教师 */
+export function exportTeacher(query: TeacherQuery) {
+  return http.download(`${BASE_URL}/export`, query)
+}
