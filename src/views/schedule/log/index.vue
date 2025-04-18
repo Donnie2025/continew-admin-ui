@@ -1,5 +1,5 @@
 <template>
-  <div class="gi_table_page">
+  <GiPageLayout>
     <GiTable
       row-key="id"
       :data="dataList"
@@ -60,7 +60,7 @@
     </GiTable>
 
     <LogDetailDrawer ref="LogDetailDrawerRef" />
-  </div>
+  </GiPageLayout>
 </template>
 
 <script setup lang="ts">

@@ -1,5 +1,5 @@
 <template>
-  <div class="gi_table_page">
+  <GiPageLayout>
     <GiTable
       row-key="id"
       :data="dataList"
@@ -74,7 +74,7 @@
 
     <JobAddModal ref="JobAddModalRef" @save-success="reset" />
     <JobDetailDrawer ref="JobDetailDrawerRef" />
-  </div>
+  </GiPageLayout>
 </template>
 
 <script setup lang="ts">
