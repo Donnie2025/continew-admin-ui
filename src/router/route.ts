@@ -43,22 +43,28 @@ export const systemRoutes: RouteRecordRaw[] = [
     meta: { hidden: true },
   },
   {
-    path: '/setting',
-    name: 'Setting',
+    path: '/user',
+    name: 'User',
     component: Layout,
     meta: { hidden: true },
     children: [
       {
-        path: '/setting/profile',
-        name: 'SettingProfile',
-        component: () => import('@/views/setting/profile/index.vue'),
+        path: '/user/profile',
+        name: 'UserProfile',
+        component: () => import('@/views/user/profile/index.vue'),
         meta: { title: '个人中心', showInTabs: false },
       },
       {
-        path: '/setting/message',
-        name: 'SettingMessage',
-        component: () => import('@/views/setting/message/index.vue'),
+        path: '/user/message',
+        name: 'UserMessage',
+        component: () => import('@/views/user/message/index.vue'),
         meta: { title: '消息中心', showInTabs: false },
+      },
+      {
+        path: '/user/notice',
+        name: 'UserNotice',
+        component: () => import('@/views/user/message/components/detail/index.vue'),
+        meta: { title: '公告详情' },
       },
     ],
   },
@@ -67,6 +73,7 @@ export const systemRoutes: RouteRecordRaw[] = [
     name: 'About',
     component: Layout,
     meta: { title: '关于项目', icon: 'apps', hidden: false, sort: 999 },
+    redirect: '/about/document/api',
     children: [
       {
         path: '/about/document/api',

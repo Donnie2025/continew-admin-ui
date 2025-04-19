@@ -1,5 +1,5 @@
 <template>
-  <div class="gi_table_page">
+  <GiPageLayout>
     <div class="header-actions">
       <a-radio-group v-model="viewType" type="button" size="small" style="margin-bottom: 16px;">
         <a-radio value="table">表格视图</a-radio>
@@ -88,7 +88,7 @@
       </a-card>
     </div>
     <DeptAddModal ref="DeptAddModalRef" :depts="dataList" @save-success="search" />
-  </div>
+  </GiPageLayout>
 </template>
 
 <script setup lang="ts">
