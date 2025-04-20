@@ -16,7 +16,7 @@
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
-import { getTeacher, addTeacher, updateTeacher } from '@/apis/education/teacher'
+import { getStudent, addStudent, updateStudent } from '@/apis/education/student'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -30,35 +30,18 @@ const { width } = useWindowSize()
 const dataId = ref('')
 const visible = ref(false)
 const isUpdate = computed(() => !!dataId.value)
-const title = computed(() => (isUpdate.value ? '修改教师' : '新增教师'))
+const title = computed(() => (isUpdate.value ? '修改学生管理' : '新增学生管理'))
 const formRef = ref<InstanceType<typeof GiForm>>()
-const { sex_type,is_show,is_fix,status } = useDict('sex_type','is_show','is_fix','status')
+const { sex_type } = useDict('sex_type')
 
 const [form, resetForm] = useResetReactive({
-  status: '1',
-  isShow: '1',
-  isFixed: '1',
-  sort: '999',
+  // todo 待补充
 })
 
 const columns: ColumnItem[] = reactive([
   {
-    label: '教师姓名',
+    label: '学生姓名',
     field: 'name',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '教师工号',
-    field: 'teacherNo',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '评分',
-    field: 'score',
     type: 'input',
     span: 24,
     required: true,
@@ -66,30 +49,10 @@ const columns: ColumnItem[] = reactive([
   {
     label: '性别',
     field: 'gender',
-    type: 'radio-group',
+    type: 'select', 
     span: 24,
     props: {
       options: sex_type,
-    },
-  },
-  {
-    label: '是否展示',
-    field: 'isShow',
-    type: 'radio-group',
-    span: 24,
-    required: true,
-    props: {
-      options: is_show,
-    },
-  },
-  {
-    label: '是否固定',
-    field: 'isFixed',
-    type: 'radio-group',
-    span: 24,
-    required: true,
-    props: {
-      options: is_fix,
     },
   },
   {
@@ -97,10 +60,17 @@ const columns: ColumnItem[] = reactive([
     field: 'phone',
     type: 'input',
     span: 24,
+    required: true,
   },
   {
     label: '邮箱',
     field: 'email',
+    type: 'input',
+    span: 24,
+  },
+  {
+    label: '所属代理的ID',
+    field: 'agentId',
     type: 'input',
     span: 24,
   },
@@ -111,47 +81,22 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
-    label: '音频地址',
-    field: 'audioUrl',
+    label: '密码',
+    field: 'password',
     type: 'input',
     span: 24,
   },
   {
-    label: '视频地址',
-    field: 'videoUrl',
+    label: '备注',
+    field: 'remark',
     type: 'input',
     span: 24,
   },
   {
-    label: '简介',
-    field: 'briefIntro',
+    label: '所属机构ID',
+    field: 'institutionId',
     type: 'input',
     span: 24,
-  },
-  {
-    label: '描述',
-    field: 'description',
-    type: 'textarea',
-    props: {
-      autoSize: true,
-    },
-    span: 24,
-  },
-  {
-    label: '排序',
-    field: 'sort',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '状态',
-    field: 'status',
-    type: 'radio-group',
-    span: 24,
-    props: {
-      options: status,
-    },
   },
 ])
 
@@ -167,10 +112,10 @@ const save = async () => {
     const isInvalid = await formRef.value?.formRef?.validate()
     if (isInvalid) return false
     if (isUpdate.value) {
-      await updateTeacher(form, dataId.value)
+      await updateStudent(form, dataId.value)
       Message.success('修改成功')
     } else {
-      await addTeacher(form)
+      await addStudent(form)
       Message.success('新增成功')
     }
     emit('save-success')
@@ -191,7 +136,7 @@ const onAdd = async () => {
 const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
-  const { data } = await getTeacher(id)
+  const { data } = await getStudent(id)
   Object.assign(form, data)
   visible.value = true
 }
