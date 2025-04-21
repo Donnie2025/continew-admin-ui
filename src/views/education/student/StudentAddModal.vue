@@ -9,17 +9,62 @@
     @before-ok="save"
     @close="reset"
   >
-    <GiForm ref="formRef" v-model="form" :columns="columns" />
+    <GiForm ref="formRef" v-model="form" :columns="columns">
+      <template #avatar="{ model }">
+        <div class="upload-wrapper">
+          <a-upload
+            action="/api/system/file/upload"
+            :file-list="uploadFile ? [uploadFile] : []"
+            :show-file-list="false"
+            :accept="acceptTypes"
+            :before-upload="beforeAvatarUpload"
+            @change="handleChange"
+            @progress="handleProgress"
+            list-type="picture-card"
+          >
+            <template #upload-button>
+              <div v-if="uploadFile && uploadFile.url" class="image-wrapper">
+                <img :src="uploadFile.url" />
+                <div class="image-mask">
+                  <IconEdit />
+                </div>
+                <a-progress
+                  v-if="uploadFile.status === 'uploading' && uploadFile.percent < 100"
+                  :percent="uploadFile.percent"
+                  type="circle"
+                  size="mini"
+                  :style="{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translateX(-50%) translateY(-50%)',
+                  }"
+                />
+              </div>
+              <div v-else>
+                <div class="upload-button">
+                  <IconPlus />
+                  <div class="upload-text">上传头像</div>
+                </div>
+              </div>
+            </template>
+          </a-upload>
+          <div class="upload-tip">支持 jpg、png 格式，大小不超过 2MB</div>
+        </div>
+      </template>
+    </GiForm>
   </a-modal>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getStudent, addStudent, updateStudent } from '@/apis/education/student'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
+import { IconEdit, IconPlus } from '@arco-design/web-vue/es/icon'
 
 const emit = defineEmits<{
   (e: 'save-success'): void
@@ -30,13 +75,67 @@ const { width } = useWindowSize()
 const dataId = ref('')
 const visible = ref(false)
 const isUpdate = computed(() => !!dataId.value)
-const title = computed(() => (isUpdate.value ? '修改学生管理' : '新增学生管理'))
+const title = computed(() => (isUpdate.value ? '修改学生' : '新增学生'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 const { sex_type } = useDict('sex_type')
+const uploadFile = ref()
 
 const [form, resetForm] = useResetReactive({
-  // todo 待补充
+  name: undefined,
+  gender: undefined,
+  phone: undefined,
+  email: undefined,
+  avatar: undefined,
+  password: undefined,
+  remark: undefined,
+  agentId: undefined,
+  institutionId: undefined
 })
+
+const acceptTypes = 'image/jpeg,image/png,image/jpg'
+
+const beforeAvatarUpload = (file: File) => {
+  const isValidType = acceptTypes.split(',').includes(file.type)
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isValidType) {
+    Message.error('上传头像图片只能是 JPG/PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    Message.error('上传头像图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+const handleChange = (_: any, currentFile: any) => {
+  uploadFile.value = {
+    ...currentFile,
+  }
+  if (currentFile.response && currentFile.response.code === 200) {
+    form.avatar = currentFile.response.data
+    Message.success('头像上传成功')
+  } else if (currentFile.status === 'error') {
+    Message.error('头像上传失败')
+  }
+}
+
+const handleProgress = (currentFile: any) => {
+  uploadFile.value = currentFile
+}
+
+// 修改时设置头像
+watch(() => form.avatar, (newValue) => {
+  if (newValue) {
+    uploadFile.value = {
+      url: newValue,
+      status: 'done'
+    }
+  } else {
+    uploadFile.value = undefined
+  }
+}, { immediate: true })
 
 const columns: ColumnItem[] = reactive([
   {
@@ -49,7 +148,7 @@ const columns: ColumnItem[] = reactive([
   {
     label: '性别',
     field: 'gender',
-    type: 'select', 
+    type: 'select',
     span: 24,
     props: {
       options: sex_type,
@@ -69,26 +168,30 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
-    label: '所属代理的ID',
-    field: 'agentId',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '头像地址',
-    field: 'headImg',
-    type: 'input',
+    label: '头像',
+    field: 'avatar',
+    type: 'custom',
     span: 24,
   },
   {
     label: '密码',
     field: 'password',
     type: 'input',
+    props: {
+      type: 'password',
+      showPassword: true,
+    },
     span: 24,
   },
   {
     label: '备注',
     field: 'remark',
+    type: 'textarea',
+    span: 24,
+  },
+  {
+    label: '所属代理ID',
+    field: 'agentId',
     type: 'input',
     span: 24,
   },
@@ -104,6 +207,7 @@ const columns: ColumnItem[] = reactive([
 const reset = () => {
   formRef.value?.formRef?.resetFields()
   resetForm()
+  uploadFile.value = undefined
 }
 
 // 保存
@@ -144,4 +248,77 @@ const onUpdate = async (id: string) => {
 defineExpose({ onAdd, onUpdate })
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="less">
+.upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:deep(.arco-upload) {
+  display: block;
+  width: 100px;
+}
+
+:deep(.arco-upload-picture-card) {
+  width: 100px;
+  height: 100px;
+}
+
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &:hover .image-mask {
+    opacity: 1;
+  }
+}
+
+.image-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  color: #fff;
+}
+
+.upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-2);
+
+  .arco-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+}
+
+.upload-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.upload-tip {
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+</style>
+
