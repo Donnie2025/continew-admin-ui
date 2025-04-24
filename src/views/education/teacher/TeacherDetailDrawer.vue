@@ -3,15 +3,26 @@
     <a-descriptions :column="2" size="large" class="general-description">
       <a-descriptions-item label="ID">{{ dataDetail?.id }}</a-descriptions-item>
       <a-descriptions-item label="教师姓名">{{ dataDetail?.name }}</a-descriptions-item>
-      <a-descriptions-item label="教师工号">{{ dataDetail?.teacherNo }}</a-descriptions-item>
       <a-descriptions-item label="评分">{{ dataDetail?.score }}</a-descriptions-item>
+      <a-descriptions-item label="单价">{{ dataDetail?.rate }}</a-descriptions-item>
       <a-descriptions-item label="标签">{{ dataDetail?.tags }}</a-descriptions-item>
-      <a-descriptions-item label="性别（0-未知 1-男 2-女）">{{ dataDetail?.gender }}</a-descriptions-item>
+      <a-descriptions-item label="性别">{{ dataDetail?.gender === 'male' ? '男' : '女' }}</a-descriptions-item>
       <a-descriptions-item label="是否展示">{{ dataDetail?.isShow }}</a-descriptions-item>
       <a-descriptions-item label="是否固定">{{ dataDetail?.isFixed }}</a-descriptions-item>
       <a-descriptions-item label="手机号码">{{ dataDetail?.phone }}</a-descriptions-item>
       <a-descriptions-item label="邮箱">{{ dataDetail?.email }}</a-descriptions-item>
-      <a-descriptions-item label="头像地址">{{ dataDetail?.headImg }}</a-descriptions-item>
+      <a-descriptions-item label="头像">
+        <a-image
+          v-if="dataDetail?.avatar"
+          :src="dataDetail.avatar"
+          :preview="true"
+          width="40"
+          height="40"
+          fit="cover"
+          style="border-radius: 50%"
+        />
+        <span v-else>暂无头像</span>
+      </a-descriptions-item>
       <a-descriptions-item label="音频地址">{{ dataDetail?.audioUrl }}</a-descriptions-item>
       <a-descriptions-item label="视频地址">{{ dataDetail?.videoUrl }}</a-descriptions-item>
       <a-descriptions-item label="简介">{{ dataDetail?.briefIntro }}</a-descriptions-item>
@@ -19,11 +30,6 @@
       <a-descriptions-item label="排序">{{ dataDetail?.sort }}</a-descriptions-item>
       <a-descriptions-item label="状态">{{ dataDetail?.status }}</a-descriptions-item>
       <a-descriptions-item label="创建时间">{{ dataDetail?.createTime }}</a-descriptions-item>
-      <a-descriptions-item label="更新时间">{{ dataDetail?.updateTime }}</a-descriptions-item>
-      <a-descriptions-item label="创建人">{{ dataDetail?.createUser }}</a-descriptions-item>
-      <a-descriptions-item label="创建人">{{ dataDetail?.createUserString }}</a-descriptions-item>
-      <a-descriptions-item label="修改人">{{ dataDetail?.updateUser }}</a-descriptions-item>
-      <a-descriptions-item label="修改人">{{ dataDetail?.updateUserString }}</a-descriptions-item>
     </a-descriptions>
   </a-drawer>
 </template>

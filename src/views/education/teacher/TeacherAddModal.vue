@@ -37,11 +37,14 @@ const { sex_type,is_show,is_fix,status } = useDict('sex_type','is_show','is_fix'
 const [form, resetForm] = useResetReactive({
   status: '1',
   isShow: '1',
-  isFixed: '1',
+  isFixed: '0',
   sort: '999',
+  gender: 'female',
+  rate: 60
 })
 
 const columns: ColumnItem[] = reactive([
+
   {
     label: '教师姓名',
     field: 'name',
@@ -50,18 +53,14 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
-    label: '教师工号',
-    field: 'teacherNo',
-    type: 'input',
+    label: '头像',
+    field: 'avatar',
+    type: 'upload-image',
     span: 24,
-    required: true,
-  },
-  {
-    label: '评分',
-    field: 'score',
-    type: 'input',
-    span: 24,
-    required: true,
+    props: {
+      limit: 1,
+      listType: 'picture-card',
+    },
   },
   {
     label: '性别',
@@ -69,8 +68,30 @@ const columns: ColumnItem[] = reactive([
     type: 'radio-group',
     span: 24,
     props: {
-      options: sex_type,
+      options: [
+        { label: '男', value: 'male' },
+        { label: '女', value: 'female' }
+      ],
     },
+  },
+  {
+    label: '手机号码',
+    field: 'phone',
+    type: 'input',
+    span: 24,
+  },
+  {
+    label: '邮箱',
+    field: 'email',
+    type: 'input',
+    span: 24,
+  },
+  {
+    label: '单价',
+    field: 'rate',
+    type: 'input-number',
+    span: 24,
+    required: true,
   },
   {
     label: '是否展示',
@@ -93,24 +114,6 @@ const columns: ColumnItem[] = reactive([
     },
   },
   {
-    label: '手机号码',
-    field: 'phone',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '邮箱',
-    field: 'email',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '头像地址',
-    field: 'headImg',
-    type: 'input',
-    span: 24,
-  },
-  {
     label: '音频地址',
     field: 'audioUrl',
     type: 'input',
@@ -129,6 +132,12 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
+    label: '评分',
+    field: 'score',
+    type: 'input',
+    span: 24
+  },
+  {
     label: '描述',
     field: 'description',
     type: 'textarea',
@@ -143,16 +152,7 @@ const columns: ColumnItem[] = reactive([
     type: 'input',
     span: 24,
     required: true,
-  },
-  {
-    label: '状态',
-    field: 'status',
-    type: 'radio-group',
-    span: 24,
-    props: {
-      options: status,
-    },
-  },
+  }
 ])
 
 // 重置

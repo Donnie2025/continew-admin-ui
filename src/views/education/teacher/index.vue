@@ -14,7 +14,6 @@
     >
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.name" placeholder="请输入教师姓名" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.teacherNo" placeholder="请输入教师工号" allow-clear @search="search" />
 	    <a-input-search v-model="queryForm.isShow" placeholder="请输入是否展示" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
@@ -31,8 +30,20 @@
           <template #default>导出</template>
         </a-button>
       </template>
+      <template #avatar="{ record }">
+        <a-image
+          v-if="record.avatar"
+          :src="record.avatar"
+          :preview="true"
+          width="40"
+          height="40"
+          fit="cover"
+          style="border-radius: 50%"
+        />
+        <a-avatar v-else :size="40">{{ record.name?.[0]?.toUpperCase() }}</a-avatar>
+      </template>
       <template #gender="{ record }">
-        <GiCellTag :value="record.gender" :dict="sex_type" />
+        <GiCellTag :value="record.gender" :dict="[{ label: '男', value: 'male' }, { label: '女', value: 'female' }]" />
       </template>
       <template #isShow="{ record }">
         <GiCellTag :value="record.isShow" :dict="is_show" />
@@ -77,11 +88,10 @@ import has from '@/utils/has'
 
 defineOptions({ name: 'Teacher' })
 
-const { sex_type,is_show,is_fix,status } = useDict('sex_type','is_show','is_fix','status')
+const { is_show, is_fix, status } = useDict('is_show', 'is_fix', 'status')
 
 const queryForm = reactive<TeacherQuery>({
   name: undefined,
-  teacherNo: undefined,
   isShow: undefined
 })
 
@@ -93,18 +103,17 @@ const {
   handleDelete
 } = useTable((page) => listTeacher({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
+{ title: '头像', dataIndex: 'avatar', slotName: 'avatar' },
   { title: '教师姓名', dataIndex: 'name', slotName: 'name', width: 170, fixed: !isMobile() ? 'left' : undefined },
-  { title: '教师工号', dataIndex: 'teacherNo', slotName: 'teacherNo' },
-  { title: '评分', dataIndex: 'score', slotName: 'score' },
-  { title: '标签', dataIndex: 'tags', slotName: 'tags' },
   { title: '性别', dataIndex: 'gender', slotName: 'gender' },
-  { title: '是否展示', dataIndex: 'isShow', slotName: 'isShow' },
-  { title: '是否固定', dataIndex: 'isFixed', slotName: 'isFixed' },
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
-  { title: '头像地址', dataIndex: 'headImg', slotName: 'headImg' },
+  { title: '单价', dataIndex: 'rate', slotName: 'rate' },
+  { title: '评分', dataIndex: 'score', slotName: 'score' },
+  { title: '标签', dataIndex: 'tags', slotName: 'tags' },
+  { title: '是否展示', dataIndex: 'isShow', slotName: 'isShow' },
+  { title: '是否固定', dataIndex: 'isFixed', slotName: 'isFixed' },
   { title: '排序', dataIndex: 'sort', slotName: 'sort' },
-  { title: '状态', dataIndex: 'status', slotName: 'status' },
   {
     title: '操作',
     dataIndex: 'action',
@@ -119,7 +128,6 @@ const columns: TableInstance['columns'] = [
 // 重置
 const reset = () => {
   queryForm.name = undefined
-  queryForm.teacherNo = undefined
   queryForm.isShow = undefined
   search()
 }
