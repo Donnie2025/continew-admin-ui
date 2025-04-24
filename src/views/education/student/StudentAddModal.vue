@@ -13,24 +13,22 @@
       <template #avatar="{ model }">
         <div class="upload-wrapper">
           <a-upload
-            action="/api/system/file/upload"
-            :file-list="uploadFile ? [uploadFile] : []"
+            :auto-upload="false"
             :show-file-list="false"
             :accept="acceptTypes"
             :before-upload="beforeAvatarUpload"
             @change="handleChange"
-            @progress="handleProgress"
             list-type="picture-card"
           >
             <template #upload-button>
-              <div v-if="uploadFile && uploadFile.url" class="image-wrapper">
-                <img :src="uploadFile.url" />
+              <div class="image-wrapper">
+                <img :src="uploadFile?.url || defaultAvatar" />
                 <div class="image-mask">
                   <IconEdit />
                 </div>
                 <a-progress
-                  v-if="uploadFile.status === 'uploading' && uploadFile.percent < 100"
-                  :percent="uploadFile.percent"
+                  v-if="uploadFile?.status === 'uploading'"
+                  :percent="uploadFile?.percent"
                   type="circle"
                   size="mini"
                   :style="{
@@ -41,15 +39,9 @@
                   }"
                 />
               </div>
-              <div v-else>
-                <div class="upload-button">
-                  <IconPlus />
-                  <div class="upload-text">上传头像</div>
-                </div>
-              </div>
             </template>
           </a-upload>
-          <div class="upload-tip">支持 jpg、png 格式，大小不超过 2MB</div>
+          <div class="upload-tip">支持 jpg、png、gif、webp、bmp 格式，大小不超过 5MB</div>
         </div>
       </template>
     </GiForm>
@@ -65,6 +57,7 @@ import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { IconEdit, IconPlus } from '@arco-design/web-vue/es/icon'
+import { uploadFile as uploadFileApi } from '@/apis/common/common'
 
 const emit = defineEmits<{
   (e: 'save-success'): void
@@ -92,31 +85,75 @@ const [form, resetForm] = useResetReactive({
   institutionId: undefined
 })
 
-const acceptTypes = 'image/jpeg,image/png,image/jpg'
+const acceptTypes = 'image/jpeg,image/png,image/jpg,image/gif,image/webp,image/bmp'
+
+const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 const beforeAvatarUpload = (file: File) => {
   const isValidType = acceptTypes.split(',').includes(file.type)
-  const isLt2M = file.size / 1024 / 1024 < 2
+  const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isValidType) {
-    Message.error('上传头像图片只能是 JPG/PNG 格式!')
+    Message.error('上传头像只能是 JPG/PNG/GIF/WebP/BMP 格式!')
     return false
   }
-  if (!isLt2M) {
-    Message.error('上传头像图片大小不能超过 2MB!')
+  if (!isLt5M) {
+    Message.error('上传头像大小不能超过 5MB!')
     return false
   }
   return true
 }
 
-const handleChange = (_: any, currentFile: any) => {
+const handleChange = async (_: any, currentFile: any) => {
+  if (!currentFile || !currentFile.file) return
+
+  // 先设置上传状态
   uploadFile.value = {
-    ...currentFile,
+    file: currentFile.file,
+    status: 'uploading',
+    percent: 0,
+    url: defaultAvatar
   }
-  if (currentFile.response && currentFile.response.code === 200) {
-    form.avatar = currentFile.response.data
+
+  try {
+    // 读取文件预览
+    const previewUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        resolve(event.target?.result as string)
+      }
+      reader.onerror = () => reject(new Error('文件读取失败'))
+      reader.readAsDataURL(currentFile.file)
+    })
+
+    // 更新预览图
+    uploadFile.value = {
+      ...uploadFile.value,
+      url: previewUrl
+    }
+
+    // 开始上传文件
+    const formData = new FormData()
+    formData.append('file', currentFile.file)
+    const { data } = await uploadFileApi(formData)
+    
+    // 更新表单和预览状态，只使用返回的 url 字段
+    form.avatar = data.url
+    uploadFile.value = {
+      file: currentFile.file,
+      url: previewUrl, // 继续使用本地预览图以获得更好的显示效果
+      status: 'done',
+      percent: 100
+    }
     Message.success('头像上传成功')
-  } else if (currentFile.status === 'error') {
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    uploadFile.value = {
+      file: currentFile.file,
+      url: defaultAvatar,
+      status: 'error',
+      percent: 0
+    }
     Message.error('头像上传失败')
   }
 }
@@ -129,11 +166,14 @@ const handleProgress = (currentFile: any) => {
 watch(() => form.avatar, (newValue) => {
   if (newValue) {
     uploadFile.value = {
-      url: newValue,
-      status: 'done'
+      status: 'done',
+      url: newValue // 直接使用 URL
     }
   } else {
-    uploadFile.value = undefined
+    uploadFile.value = {
+      status: 'done',
+      url: defaultAvatar
+    }
   }
 }, { immediate: true })
 
@@ -215,6 +255,13 @@ const save = async () => {
   try {
     const isInvalid = await formRef.value?.formRef?.validate()
     if (isInvalid) return false
+
+    // 确保头像字段被正确设置
+    if (uploadFile.value?.status === 'error') {
+      Message.error('头像上传失败，请重新上传')
+      return false
+    }
+
     if (isUpdate.value) {
       await updateStudent(form, dataId.value)
       Message.success('修改成功')
@@ -269,6 +316,12 @@ defineExpose({ onAdd, onUpdate })
   position: relative;
   width: 100%;
   height: 100%;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--color-fill-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   img {
     width: 100%;
@@ -294,6 +347,7 @@ defineExpose({ onAdd, onUpdate })
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
   color: #fff;
+  cursor: pointer;
 }
 
 .upload-button {

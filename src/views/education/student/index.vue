@@ -30,6 +30,22 @@
           <template #default>导出</template>
         </a-button>
       </template>
+      <template #avatar="{ record }">
+        <a-image
+          v-if="record.avatar"
+          :src="record.avatar"
+          :preview="true"
+          width="40"
+          height="40"
+          fit="cover"
+          style="border-radius: 50%; cursor: pointer;"
+        >
+          <template #loader>
+            <a-spin />
+          </template>
+        </a-image>
+        <a-avatar v-else :size="40">{{ record.name?.[0]?.toUpperCase() }}</a-avatar>
+      </template>
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:student:get']" title="详情" @click="onDetail(record)">详情</a-link>
@@ -61,6 +77,7 @@ import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
+import { IconEye } from '@arco-design/web-vue/es/icon'
 
 defineOptions({ name: 'Student' })
 
@@ -82,15 +99,12 @@ const {
 const columns: TableInstance['columns'] = [
   { title: 'ID', dataIndex: 'id', slotName: 'id' },
   { title: '学生姓名', dataIndex: 'name', slotName: 'name' },
+  { title: '头像', dataIndex: 'avatar', slotName: 'avatar' },
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
   { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime' },
-  { title: '所属代理的ID', dataIndex: 'agentId', slotName: 'agentId' },
-  { title: '头像', dataIndex: 'headImg', slotName: 'headImg' },
-  { title: '密码', dataIndex: 'password', slotName: 'password' },
-  { title: '备注', dataIndex: 'remark', slotName: 'remark' },
-  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime' },
   { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId' },
+  { title: '所属代理的ID', dataIndex: 'agentId', slotName: 'agentId' },
   {
     title: '操作',
     dataIndex: 'action',
