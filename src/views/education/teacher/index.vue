@@ -49,7 +49,7 @@
         <GiCellTag :value="record.isShow" :dict="is_show" />
       </template>
       <template #isFixed="{ record }">
-        <GiCellTag :value="record.isFixed" :dict="is_fix" />
+        <GiCellTag :value="record.isFixed" :dict="is_fixed" />
       </template>
       <template #status="{ record }">
         <GiCellTag :value="record.status" :dict="status" />
@@ -88,7 +88,7 @@ import has from '@/utils/has'
 
 defineOptions({ name: 'Teacher' })
 
-const { is_show, is_fix, status } = useDict('is_show', 'is_fix', 'status')
+const { is_show, is_fixed, status } = useDict('is_show', 'is_fixed', 'status')
 
 const queryForm = reactive<TeacherQuery>({
   name: undefined,

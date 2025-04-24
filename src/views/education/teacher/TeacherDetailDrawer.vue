@@ -7,8 +7,8 @@
       <a-descriptions-item label="单价">{{ dataDetail?.rate }}</a-descriptions-item>
       <a-descriptions-item label="标签">{{ dataDetail?.tags }}</a-descriptions-item>
       <a-descriptions-item label="性别">{{ dataDetail?.gender === 'male' ? '男' : '女' }}</a-descriptions-item>
-      <a-descriptions-item label="是否展示">{{ dataDetail?.isShow }}</a-descriptions-item>
-      <a-descriptions-item label="是否固定">{{ dataDetail?.isFixed }}</a-descriptions-item>
+      <a-descriptions-item label="是否展示">{{ dataDetail?.isShow === '1' ? '是' : '否' }}</a-descriptions-item>
+      <a-descriptions-item label="是否固定">{{ dataDetail?.isFixed === '1' ? '是' : '否' }}</a-descriptions-item>
       <a-descriptions-item label="手机号码">{{ dataDetail?.phone }}</a-descriptions-item>
       <a-descriptions-item label="邮箱">{{ dataDetail?.email }}</a-descriptions-item>
       <a-descriptions-item label="头像">
@@ -28,7 +28,7 @@
       <a-descriptions-item label="简介">{{ dataDetail?.briefIntro }}</a-descriptions-item>
       <a-descriptions-item label="描述">{{ dataDetail?.description }}</a-descriptions-item>
       <a-descriptions-item label="排序">{{ dataDetail?.sort }}</a-descriptions-item>
-      <a-descriptions-item label="状态">{{ dataDetail?.status }}</a-descriptions-item>
+      <a-descriptions-item label="状态">{{ dataDetail?.status === '1' ? '启用' : '禁用' }}</a-descriptions-item>
       <a-descriptions-item label="创建时间">{{ dataDetail?.createTime }}</a-descriptions-item>
     </a-descriptions>
   </a-drawer>
