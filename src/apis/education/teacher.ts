@@ -3,7 +3,7 @@ import http from '@/utils/http'
 const BASE_URL = '/education/teacher'
 
 export interface TeacherResp {
-  id: string
+  id: number
   name: string
   teacherNo: string
   score: string
@@ -26,6 +26,12 @@ export interface TeacherResp {
   updateUserString: string
   disabled: boolean
 }
+
+/** @desc 查询所有状态为活跃的教师列表 */
+export function listActiveTeachers() {
+  return http.get<TeacherResp[]>(`${BASE_URL}/active`)
+}
+
 export interface TeacherDetailResp {
   id: string
   name: string
@@ -55,8 +61,6 @@ export interface TeacherQuery {
   name: string | undefined
   teacherNo: string | undefined
   isShow: string | undefined
-  sort: string | undefined
-  sort: Array<string>
 }
 export interface TeacherPageQuery extends TeacherQuery, PageQuery {}
 
