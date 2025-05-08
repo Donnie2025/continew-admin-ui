@@ -242,21 +242,16 @@
       </div>
       <div class="row">
         <span class="label">选择日期：</span>
-        <a-date-picker v-model="addSlotForm.dates" style="width: 220px;" :multiple="true" />
-        <span class="desc">支持多选，可选择多个日期</span>
+        <a-date-picker v-model="addSlotForm.dates" style="width: 220px;" />
+        <span class="desc">只可单选日期</span>
       </div>
-      <div class="row">
-        <a-tabs v-model:active-key="addSlotForm.timeType" type="line">
-          <a-tab-pane v-for="tab in timeTabs" :key="tab.value" :title="tab.label" />
-        </a-tabs>
-      </div>
-      <div class="row time-section">
+      <div class="time-section">
         <div class="period-block">
           <div class="period-title">
             上午时间 <a-checkbox v-model="allChecked.morning" @change="val => handleCheckAll('morning', val)">全选</a-checkbox>
           </div>
           <div class="period-times">
-            <a-checkbox v-for="t in timeOptions[addSlotForm.timeType].morning" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('morning')">{{ t }}</a-checkbox>
+            <a-checkbox v-for="t in timeOptions['30'].morning" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('morning')">{{ t }}</a-checkbox>
           </div>
         </div>
         <div class="period-block">
@@ -264,7 +259,7 @@
             下午时间 <a-checkbox v-model="allChecked.afternoon" @change="val => handleCheckAll('afternoon', val)">全选</a-checkbox>
           </div>
           <div class="period-times">
-            <a-checkbox v-for="t in timeOptions[addSlotForm.timeType].afternoon" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('afternoon')">{{ t }}</a-checkbox>
+            <a-checkbox v-for="t in timeOptions['30'].afternoon" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('afternoon')">{{ t }}</a-checkbox>
           </div>
         </div>
         <div class="period-block">
@@ -272,15 +267,7 @@
             晚上时间 <a-checkbox v-model="allChecked.evening" @change="val => handleCheckAll('evening', val)">全选</a-checkbox>
           </div>
           <div class="period-times">
-            <a-checkbox v-for="t in timeOptions[addSlotForm.timeType].evening" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('evening')">{{ t }}</a-checkbox>
-          </div>
-        </div>
-        <div class="period-block">
-          <div class="period-title">
-            凌晨时间 <a-checkbox v-model="allChecked.night" @change="val => handleCheckAll('night', val)">全选</a-checkbox>
-          </div>
-          <div class="period-times">
-            <a-checkbox v-for="t in timeOptions[addSlotForm.timeType].night" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('night')">{{ t }}</a-checkbox>
+            <a-checkbox v-for="t in timeOptions['30'].evening" :key="t" :value="t" v-model="addSlotForm.times" @change="() => handleTimeChange('evening')">{{ t }}</a-checkbox>
           </div>
         </div>
       </div>
@@ -613,7 +600,7 @@ const addSlotForm = ref<{
   tool: string;
   meetingId: string;
   meetingUrl: string;
-  dates: dayjs.Dayjs[];
+  dates: dayjs.Dayjs | null;
   timeType: string;
   times: string[];
 }>({
@@ -621,7 +608,7 @@ const addSlotForm = ref<{
   tool: 'classin_api',
   meetingId: '',
   meetingUrl: '',
-  dates: [],
+  dates: null,
   timeType: '30',
   times: [],
 })
@@ -653,11 +640,11 @@ const handleAddSlot = () => {
 const handleAddSlotOk = () => {
   Message.success('保存成功')
   addSlotVisible.value = false
-  addSlotForm.value.dates = []
+  addSlotForm.value.dates = null
 }
 const handleAddSlotCancel = () => {
   addSlotVisible.value = false
-  addSlotForm.value.dates = []
+  addSlotForm.value.dates = null
 }
 
 const allChecked = ref({ morning: false, afternoon: false, evening: false, night: false })
@@ -682,7 +669,7 @@ watch(
   () => addSlotForm.value.dates,
   (val) => {
     if (!Array.isArray(val)) {
-      addSlotForm.value.dates = []
+      addSlotForm.value.dates = null
       return
     }
     if (val.length === 0) return
@@ -1133,12 +1120,11 @@ watch(
   }
   .time-section {
     display: flex;
-    flex-wrap: wrap;
-    gap: 24px 0;
+    flex-direction: column;
+    gap: 0;
     .period-block {
-      flex: 1 1 45%;
-      min-width: 320px;
-      margin-bottom: 12px;
+      margin-bottom: 32px;
+      width: 100%;
       .period-title {
         font-size: 15px;
         font-weight: 500;
@@ -1148,12 +1134,14 @@ watch(
         gap: 8px;
       }
       .period-times {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px 12px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px 0;
         .arco-checkbox {
-          min-width: 70px;
-          margin-bottom: 6px;
+          min-width: 100px;
+          margin-bottom: 0;
+          font-size: 15px;
+          justify-content: flex-start;
         }
       }
     }
