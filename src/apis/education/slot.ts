@@ -90,3 +90,12 @@ export function deleteSlot(id: string) {
 export function exportSlot(query: SlotQuery) {
   return http.download(`${BASE_URL}/export`, query)
 }
+
+/** @desc 查询可用课时 */
+export function listAvailableSlots(teacherId: string | number, startDate: string, endDate: string) {
+  return http.get<SlotResp[]>(`${BASE_URL}/available`, {
+    teacherId,
+    startDate,
+    endDate
+  })
+}
