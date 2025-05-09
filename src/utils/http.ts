@@ -57,6 +57,11 @@ http.interceptors.request.use(
       }
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // 打印请求日志
+    console.log(`[请求] ${config.method?.toUpperCase()} ${config.url}`, 
+      config.method?.toLowerCase() === 'get' ? config.params : config.data)
+    
     return config
   },
   (error) => Promise.reject(error),
@@ -66,6 +71,17 @@ http.interceptors.request.use(
 http.interceptors.response.use(
   (response: AxiosResponse) => {
     const { data } = response
+    
+    // 打印响应日志
+    console.log(`[响应] ${response.config.method?.toUpperCase()} ${response.config.url}`, data)
+    
+    // 响应数据为空的处理
+    if (!data) {
+      console.error('响应数据为空', response.config.url)
+      handleError('响应数据为空')
+      return Promise.reject(new Error('响应数据为空'))
+    }
+    
     const { success, code, msg } = data
 
     if (response.request.responseType === 'blob') {
@@ -109,6 +125,8 @@ http.interceptors.response.use(
     return Promise.reject(new Error(msg || '服务器端错误'))
   },
   (error: AxiosError) => {
+    console.error('请求错误', error)
+    
     if (!error.response) {
       handleError('网络连接失败，请检查您的网络')
       return Promise.reject(error)

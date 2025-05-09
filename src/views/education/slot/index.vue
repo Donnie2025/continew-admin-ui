@@ -242,8 +242,12 @@
       </div>
       <div class="row">
         <span class="label">选择日期：</span>
-        <a-date-picker v-model="addSlotForm.dates" style="width: 220px;" />
-        <span class="desc">只可单选日期</span>
+        <a-range-picker 
+          v-model="addSlotForm.dateRange" 
+          style="width: 320px;"
+          allow-clear
+        />
+        <span class="desc">选择课程日期范围</span>
       </div>
       <div class="time-section">
         <div class="period-block">
@@ -285,6 +289,7 @@ import axios from 'axios'
 import { IconLeft, IconRight } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { listActiveTeachers } from '@/apis/education/teacher'
+import { batchCreateSlot } from '@/apis/education/slot'
 import dayjs from 'dayjs'
 
 interface CourseSlot {
@@ -600,7 +605,7 @@ const addSlotForm = ref<{
   tool: string;
   meetingId: string;
   meetingUrl: string;
-  dates: dayjs.Dayjs | null;
+  dateRange: any; // 日期范围
   timeType: string;
   times: string[];
 }>({
@@ -608,7 +613,7 @@ const addSlotForm = ref<{
   tool: 'classin_api',
   meetingId: '',
   meetingUrl: '',
-  dates: null,
+  dateRange: null, // 初始为null
   timeType: '30',
   times: [],
 })
@@ -635,16 +640,92 @@ const timeOptions = {
 }
 
 const handleAddSlot = () => {
+  addSlotForm.value = {
+    online: true,
+    tool: 'classin_api',
+    meetingId: '',
+    meetingUrl: '',
+    dateRange: null,
+    timeType: '30',
+    times: [],
+  }
+  console.log('打开添加课程弹窗，初始化表单:', addSlotForm.value);
   addSlotVisible.value = true
 }
-const handleAddSlotOk = () => {
-  Message.success('保存成功')
-  addSlotVisible.value = false
-  addSlotForm.value.dates = null
+const handleAddSlotOk = async () => {
+  // 检查表单数据
+  if (!addSlotForm.value.dateRange || !Array.isArray(addSlotForm.value.dateRange) || addSlotForm.value.dateRange.length !== 2) {
+    Message.error('请选择日期范围');
+    console.error('日期范围未选择，无法提交');
+    return;
+  }
+  
+  console.log('表单中的日期范围数据:', addSlotForm.value.dateRange);
+  
+  if (addSlotForm.value.times.length === 0) {
+    Message.error('请选择至少一个时间段');
+    return;
+  }
+  
+  if (!selectedTeacherId.value) {
+    Message.error('请选择老师');
+    return;
+  }
+  
+  try {
+    // 准备请求数据
+    const formattedDates = processDateRange(addSlotForm.value.dateRange);
+    
+    if (formattedDates.length === 0) {
+      Message.error('日期范围处理失败，请重新选择日期');
+      return;
+    }
+    
+    const batchReq = {
+      teacherId: selectedTeacherId.value,
+      teacherName: currentTeacherName.value,
+      online: addSlotForm.value.online,
+      tool: addSlotForm.value.tool,
+      meetingId: addSlotForm.value.meetingId,
+      meetingUrl: addSlotForm.value.meetingUrl,
+      dates: formattedDates,
+      times: addSlotForm.value.times
+    };
+    
+    // 打印请求数据，用于调试
+    console.log('批量创建课程时间请求数据:', JSON.stringify(batchReq));
+    
+    // 调用批量创建API
+    const res = await batchCreateSlot(batchReq);
+    
+    // 打印响应数据，用于调试
+    console.log('批量创建课程时间响应数据:', res);
+    
+    // 处理响应
+    if (res && res.data) {
+      const slotCount = Array.isArray(res.data) ? res.data.length : 0;
+      Message.success(`成功创建${slotCount}个课程时间`);
+      // 关闭弹窗
+      addSlotVisible.value = false;
+      // 重置表单
+      addSlotForm.value.dateRange = null;
+      addSlotForm.value.times = [];
+    } else {
+      Message.error('创建成功，但返回数据为空');
+      // 关闭弹窗
+      addSlotVisible.value = false;
+      // 重置表单
+      addSlotForm.value.dateRange = null;
+      addSlotForm.value.times = [];
+    }
+  } catch (error: any) {
+    console.error('创建课程时间失败:', error);
+    Message.error('创建失败:' + (error.message || '未知错误'));
+  }
 }
 const handleAddSlotCancel = () => {
   addSlotVisible.value = false
-  addSlotForm.value.dates = null
+  addSlotForm.value.dateRange = null
 }
 
 const allChecked = ref({ morning: false, afternoon: false, evening: false, night: false })
@@ -665,23 +746,46 @@ const handleTimeChange = (period) => {
   allChecked.value[period] = isPeriodAllChecked(period)
 }
 
-watch(
-  () => addSlotForm.value.dates,
-  (val) => {
-    if (!Array.isArray(val)) {
-      addSlotForm.value.dates = null
-      return
+watch(() => addSlotForm.value.dateRange, (newVal) => {
+  console.log('dateRange 值变化:', newVal);
+  // 确保值始终是数组
+  if (newVal && !Array.isArray(newVal)) {
+    addSlotForm.value.dateRange = newVal ? [newVal] : [];
+  }
+}, { deep: true });
+
+// 处理日期范围，生成范围内所有日期的数组
+const processDateRange = (dateRange: any[]): string[] => {
+  if (!dateRange || !Array.isArray(dateRange) || dateRange.length !== 2) {
+    console.error('无效的日期范围');
+    return [];
+  }
+  
+  try {
+    const startDate = dayjs(dateRange[0]);
+    const endDate = dayjs(dateRange[1]);
+    
+    if (!startDate.isValid() || !endDate.isValid()) {
+      console.error('日期范围中存在无效日期');
+      return [];
     }
-    if (val.length === 0) return
-    if (
-      typeof val[0] === 'string' ||
-      (typeof val[0] === 'object' && typeof val[0].format !== 'function')
-    ) {
-      addSlotForm.value.dates = val.map(d => dayjs(d))
+    
+    const formattedDates: string[] = [];
+    let currentDate = startDate;
+    
+    // 循环添加范围内的每一天
+    while (currentDate.valueOf() <= endDate.valueOf()) {
+      formattedDates.push(currentDate.format('YYYY-MM-DD'));
+      currentDate = currentDate.add(1, 'day');
     }
-  },
-  { deep: true }
-)
+    
+    console.log('日期范围生成的所有日期:', formattedDates);
+    return formattedDates;
+  } catch (error) {
+    console.error('处理日期范围出错:', error);
+    return [];
+  }
+};
 </script>
 
 <style scoped lang="less">

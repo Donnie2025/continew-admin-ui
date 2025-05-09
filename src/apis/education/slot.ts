@@ -42,6 +42,20 @@ export interface SlotQuery {
 }
 export interface SlotPageQuery extends SlotQuery, PageQuery {}
 
+// 批量创建课程时间请求参数接口
+export interface BatchSlotReq {
+  teacherId: number | string
+  teacherName?: string
+  online: boolean
+  tool?: string
+  meetingId?: string
+  meetingUrl?: string
+  duration?: number
+  institutionId?: number | string
+  dates: string[]
+  times: string[]
+}
+
 /** @desc 查询课程管理列表 */
 export function listSlot(query: SlotPageQuery) {
   return http.get<PageRes<SlotResp[]>>(BASE_URL, query)
@@ -55,6 +69,11 @@ export function getSlot(id: string) {
 /** @desc 新增课程管理 */
 export function addSlot(data: any) {
   return http.post(BASE_URL, data)
+}
+
+/** @desc 批量创建课程时间 */
+export function batchCreateSlot(data: BatchSlotReq) {
+  return http.post<SlotResp[]>(`${BASE_URL}/batch`, data)
 }
 
 /** @desc 修改课程管理 */
