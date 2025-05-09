@@ -16,74 +16,78 @@
       </div>
     </div>
     <div class="main-content">
-      <div class="teacher-list">
-        <div class="search-box">
-          <a-input-search v-model="teacherSearch" placeholder="搜索老师" allow-clear />
-        </div>
-        <div class="teacher-items">
-          <a-list :bordered="false">
-            <a-list-item v-for="teacher in filteredTeachers" :key="teacher.id" class="teacher-item"
+    <div class="teacher-list">
+      <div class="search-box">
+        <a-input-search v-model="teacherSearch" placeholder="搜索老师" allow-clear />
+      </div>
+      <div class="teacher-items">
+        <a-list :bordered="false">
+          <a-list-item v-for="teacher in filteredTeachers" :key="teacher.id" class="teacher-item"
               :class="{ active: selectedTeacherId === teacher.id }"
-              @click="handleSelectTeacher(teacher.id)">
-              <div class="teacher-avatar">
-                <a-avatar :size="36">
-                  <img v-if="teacher.avatar" :src="teacher.avatar" />
-                  <template v-else>{{ teacher.name?.[0]?.toUpperCase() }}</template>
-                </a-avatar>
-              </div>
-              <div class="teacher-info">
-                <div class="teacher-name">{{ teacher.name }}</div>
-              </div>
-            </a-list-item>
-          </a-list>
+            @click="handleSelectTeacher(teacher.id)">
+            <div class="teacher-avatar">
+              <a-avatar :size="36">
+                <img v-if="teacher.avatar" :src="teacher.avatar" />
+                <template v-else>{{ teacher.name?.[0]?.toUpperCase() }}</template>
+              </a-avatar>
+            </div>
+            <div class="teacher-info">
+              <div class="teacher-name">{{ teacher.name }}</div>
+            </div>
+          </a-list-item>
+        </a-list>
+      </div>
+      </div>
+    <div class="schedule-content">
+      <div class="schedule-header">
+        <div class="nav-actions">
+          <a-space>
+            <a-button-group>
+              <a-button @click="handlePrevWeek">
+                <template #icon><icon-left /></template>
+              </a-button>
+              <a-button @click="handleNextWeek">
+                <template #icon><icon-right /></template>
+              </a-button>
+            </a-button-group>
+            <a-button @click="handleToday">今天</a-button>
+          </a-space>
+          <div class="date-range">{{ dateRangeStr }}</div>
         </div>
       </div>
-      <div class="schedule-content">
-        <div class="schedule-header">
-          <div class="nav-actions">
-            <a-space>
-              <a-button-group>
-                <a-button @click="handlePrevWeek">
-                  <template #icon><icon-left /></template>
-                </a-button>
-                <a-button @click="handleNextWeek">
-                  <template #icon><icon-right /></template>
-                </a-button>
-              </a-button-group>
-              <a-button @click="handleToday">今天</a-button>
-            </a-space>
-            <div class="date-range">{{ dateRangeStr }}</div>
+      <div class="schedule-grid">
+        <div class="week-header">
+          <div v-for="day in weekDays" :key="day.date" class="day-column">
+            <div class="day-label">{{ day.label }}</div>
+            <div class="date-label">{{ day.date }}</div>
           </div>
         </div>
-        <div class="schedule-grid">
-          <div class="week-header">
-            <div v-for="day in weekDays" :key="day.date" class="day-column">
-              <div class="day-label">{{ day.label }}</div>
-              <div class="date-label">{{ day.date }}</div>
-            </div>
-          </div>
-          <div class="time-grid">
+        <div class="time-grid">
             <!-- 对每个时间槽，只有当时间槽在某天有数据时才显示 -->
-            <div v-for="timeSlot in timeSlots" :key="timeSlot" class="time-row">
+          <div v-for="timeSlot in timeSlots" :key="timeSlot" class="time-row">
               <!-- 判断这个时间是否在任何日期有课时 -->
               <template v-if="hasAnySlotInWeek(timeSlot)">
-                <div v-for="(day, dayIndex) in 7" :key="day" class="time-cell">
+            <div v-for="(day, dayIndex) in 7" :key="day" class="time-cell">
                   <!-- 只在有数据的情况下才显示格子 -->
-                  <div
+              <div
                     v-if="hasSlotOnDay(timeSlot, dayIndex)"
-                    class="slot-card"
-                    :class="getSlotInfo(timeSlot, dayIndex).status"
+                class="slot-card"
+                    :class="[
+                      getSlotInfo(timeSlot, dayIndex).status,
+                      {'online-slot': isSlotOnline(timeSlot, dayIndex)},
+                      {'offline-slot': !isSlotOnline(timeSlot, dayIndex)}
+                    ]"
                     @click="handleCourseClick(timeSlot, dayIndex)"
-                  >
-                    <span class="status-bar" :class="getSlotInfo(timeSlot, dayIndex).status"></span>
-                    <span class="slot-content">
-                      <span class="slot-time">{{ timeSlot }}</span>
-                      <span v-if="getSlotInfo(timeSlot, dayIndex).studentName" class="slot-student">{{ getSlotInfo(timeSlot, dayIndex).studentName }}</span>
-                    </span>
-                  </div>
+              >
+                <span class="status-bar" :class="getSlotInfo(timeSlot, dayIndex).status"></span>
+                <span class="slot-content">
+                  <span class="slot-time">{{ timeSlot }}</span>
+                  <span v-if="getSlotInfo(timeSlot, dayIndex).studentName" class="slot-student">{{ getSlotInfo(timeSlot, dayIndex).studentName }}</span>
+                </span>
+              </div>
                   <!-- 没有数据时显示空白 -->
                   <div v-else class="slot-empty"></div>
-                </div>
+            </div>
               </template>
             </div>
           </div>
@@ -306,6 +310,7 @@ interface CourseSlot {
   weekday: number | boolean;
   status: 'booked' | 'available' | 'completed';
   startDate?: string; // 添加startDate字段
+  isOnline?: boolean; // 添加isOnline字段表示是否在线
 }
 
 // 教师数据从后端获取
@@ -337,6 +342,7 @@ const loadTimeSlots = () => {
         time: string;
         weekday: any; // 使用any类型避免类型冲突
         id: number | null;
+        isOnline: boolean; // 添加isOnline字段
       }
       
       const availableSlots: SlotInfo[] = [];
@@ -348,7 +354,8 @@ const loadTimeSlots = () => {
             date: slot.startDate,
             time: slot.startTime,
             weekday: slot.weekday,
-            id: typeof slot.id === 'number' ? slot.id : 0
+            id: typeof slot.id === 'number' ? slot.id : 0,
+            isOnline: !!slot.isOnline // 确保是布尔值
           });
         }
       });
@@ -369,7 +376,8 @@ const loadTimeSlots = () => {
           startTime: slot.time,
           weekday: slot.weekday,
           status: 'available',
-          startDate: slot.date
+          startDate: slot.date,
+          isOnline: slot.isOnline
         });
       });
       
@@ -397,7 +405,7 @@ onMounted(() => {
     .then(res => {
       if (res.data && Array.isArray(res.data)) {
         teachers.value = res.data
-        // 默认选中第一个老师
+  // 默认选中第一个老师
         if (teachers.value.length > 0) {
           selectedTeacherId.value = teachers.value[0].id
           loadCourseData() // 加载第一个老师的数据
@@ -520,7 +528,8 @@ const loadCourseData = () => {
           startTime: slot.startTime,
           weekday: slot.weekday || 0,
           status: 'available',
-          startDate: slot.startDate
+          startDate: slot.startDate,
+          isOnline: slot.isOnline
         })
       })
       
@@ -723,7 +732,7 @@ const handleEditSave = () => {
         Message.error('添加课时失败: ' + res.msg)
       }
       
-      editModalVisible.value = false
+  editModalVisible.value = false
     })
     .catch(error => {
       console.error('保存课时出错:', error)
@@ -739,7 +748,7 @@ const handleEditCancel = () => {
 // 新增：空白格点击添加
 const handleCellClick = (timeSlot: string, dayIndex: number) => {
   const day = weekDays.value[dayIndex]
-  handleAddCourse(timeSlot, dayIndex)
+    handleAddCourse(timeSlot, dayIndex)
 }
 
 // 获取当前格子的课程信息和状态
@@ -752,13 +761,15 @@ const getSlotInfo = (timeSlot: string, dayIndex: number) => {
     return {
       status: isBooked ? 'booked' : 'available', // 根据是否有学生名判断状态
       studentName: isBooked ? slot.studentName : '未被预约', // 有学生名显示学生名，否则显示"未被预约"
-      time: timeSlot
+      time: timeSlot,
+      isOnline: slot.isOnline // 传递isOnline状态
     }
   }
   return {
     status: 'empty',
     studentName: '',
-    time: timeSlot
+    time: timeSlot,
+    isOnline: false
   }
 }
 
@@ -977,128 +988,113 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
   // 检查是否有任何一天在这个时间点有课程
   return courseSlots.some(slot => slot.startTime === timeSlot);
 }
+
+// 判断课时是否为在线课程
+const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
+  const slot = getCurrentWeekCourse(timeSlot, dayIndex)
+  return !!slot?.isOnline
+}
 </script>
 
 <style scoped lang="less">
 .schedule-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  overflow: hidden;
   background: var(--color-bg-1);
 }
 
 .top-bar {
-  width: 100%;
-  background: #f6faf8;
-  border-radius: 20px 20px 0 0;
-  box-sizing: border-box;
-  padding: 24px 0 0 0;
-  margin-bottom: 8px;
+  padding: 16px 24px;
+  background: #fff;
+    border-bottom: 1px solid var(--color-border);
   .top-bar-inner {
-    max-width: 1600px;
-    margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 32px;
-  }
-  .teacher-info {
-    font-size: 22px;
-    font-weight: 500;
-    color: #222;
-    .teacher-name {
-      font-size: 24px;
-      font-weight: 700;
-      color: #222;
-      margin-left: 4px;
+    .teacher-info {
+      font-size: 16px;
+      .teacher-name {
+        font-weight: 600;
+        font-size: 18px;
+        color: var(--color-text-1);
+      }
     }
-  }
-  .action-buttons {
-    display: flex;
-    gap: 8px;
-    .arco-btn-group {
-      gap: 8px;
-    }
-    .arco-btn {
-      font-size: 15px;
-      border-radius: 8px;
-      padding: 0 16px;
+    .action-buttons {
+      display: flex;
+      gap: 16px;
     }
   }
 }
 
 .main-content {
   display: flex;
-  flex: 1;
-  min-height: 0;
-  align-items: flex-start;
+    flex: 1;
+  overflow: hidden;
 }
 
 .teacher-list {
-  width: 160px;
+  width: 240px;
+  padding: 16px 0;
+  background: #fff;
   border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-2);
-  .search-box {
-    padding: 8px 8px 0 8px;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .teacher-items {
-    flex: 1;
     overflow-y: auto;
+  
+  .search-box {
+    padding: 0 16px 16px;
   }
+
+  .teacher-items {
   .teacher-item {
-    padding: 8px 8px;
-    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 15px;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: background 0.2s;
+      
     &:hover {
       background: var(--color-fill-2);
-    }
   }
+
   .teacher-avatar {
-    min-width: 36px;
-    .arco-avatar {
-      width: 36px !important;
-      height: 36px !important;
-      font-size: 16px !important;
+        margin-right: 12px;
+      }
+      
+      .teacher-info {
+        flex: 1;
+        .teacher-name {
+          font-weight: 500;
+        }
+      }
     }
   }
 }
 
 .schedule-content {
   flex: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .schedule-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 12px 24px;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+
   .nav-actions {
-    width: 100%;
     display: flex;
     align-items: center;
-    gap: 16px;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
+    gap: 12px;
+
   .date-range {
-    font-size: 20px;
-    font-weight: 700;
-    color: #222;
-    text-align: center;
-    letter-spacing: 1px;
-    margin: 12px 0 0 0;
-    width: 100%;
+      font-size: 14px;
+    font-weight: 500;
+      color: var(--color-text-2);
+    }
   }
 }
 
@@ -1107,54 +1103,79 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
   overflow: auto;
   background: #fff;
   border-radius: 20px;
-  margin: 24px;
+  margin: 0 24px 24px 24px;
   box-shadow: 0 4px 24px 0 rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  
+  /* 在小屏幕上减少边距 */
+  @media (max-width: 768px) {
+    margin: 0 12px 12px 12px;
+    border-radius: 12px;
+  }
 }
 
 .week-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-gap: 0 6px;
   border-bottom: 1px solid var(--color-border);
   background: #fff;
   border-radius: 20px 20px 0 0;
   overflow: hidden;
+  margin-bottom: 8px; /* 增加底部间距与时间行保持一致 */
+  padding: 0 6px;
+  
   .day-column {
-    padding: 16px 0 8px 0;
+    padding: 12px 0 8px 0; /* 增加上下内边距 */
     text-align: center;
-    border-right: 1px solid var(--color-border);
+    border-right: none;
+    
     .day-label {
       font-weight: 600;
-      font-size: 16px;
+      font-size: 15px; /* 稍微增加字体大小 */
     }
+    
     .date-label {
       color: var(--color-text-3);
-      margin-top: 4px;
-      font-size: 15px;
-    }
-    &:last-child {
-      border-right: none;
+      margin-top: 3px; /* 稍微增加间距 */
+      font-size: 14px; /* 稍微增加字体大小 */
     }
   }
 }
 
 .time-grid {
+  padding: 8px 6px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  
   .time-row {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-gap: 0 6px;
     border-bottom: 1px solid var(--color-border);
-    min-height: 48px;
+    min-height: 42px; /* 增加行高 */
     align-items: stretch;
     background: #fff;
+    margin-bottom: 8px; /* 稍微增加行间距 */
+    &:last-child {
+      margin-bottom: 0;
+      border-bottom: none;
   }
+  }
+  
   .time-cell {
-    height: 48px;
-    border-right: 1px solid var(--color-border);
-    padding: 0;
+    min-height: 42px; /* 增加单元格高度 */
+    border-right: none;
+    padding: 3px; /* 增加内边距 */
     position: relative;
     background: #fff;
-    &:last-child {
-      border-right: none;
-    }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
 }
 
@@ -1162,26 +1183,51 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  height: 40px;
-  border-radius: 6px;
-  margin: 2px 0;
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.06);
-  background: #e5e6eb; /* 默认灰色背景 */
+  min-height: 38px;
+  height: auto;
+  border-radius: 5px;
+  margin: 0;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.06);
+  background: #e5e6eb;
   cursor: pointer;
-  transition: box-shadow 0.2s, background 0.2s;
+  transition: all 0.25s ease;
   position: relative;
-  padding-left: 10px;
+  padding: 6px 8px 6px 12px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
   
+  /* 根据屏幕大小调整展示方式 */
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 5px 5px 5px 10px;
+    
+    .slot-time {
+      font-size: 13px;
+    }
+    
+    .slot-student {
+      font-size: 11px;
+      margin-left: 0;
+    }
+  }
+  
+  &.online-slot {
+    border-left: 4px solid #52c41a;
+  }
+  
+  &.offline-slot {
+    border-left: 4px solid #f5222d;
+  }
+  
   .status-bar {
-    width: 4px;
+    width: 3px;
     height: 70%;
-    border-radius: 2px;
-    margin-right: 10px;
-    background: #bcbcbc; /* 默认灰色状态条 */
+    border-radius: 1px;
+    margin-right: 8px;
+    background: #bcbcbc;
     flex-shrink: 0;
   }
   
@@ -1189,9 +1235,9 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    color: #fff; /* 文本颜色为白色 */
+    gap: 4px;
+    font-size: 14px;
+    color: #fff;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -1202,13 +1248,13 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
   
   .slot-time {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     flex-shrink: 0;
   }
   
   .slot-student {
-    margin-left: 6px;
-    font-size: 15px;
+    margin-left: 4px;
+    font-size: 13px;
     font-weight: 500;
     flex-shrink: 1;
     overflow: hidden;
@@ -1216,9 +1262,8 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
     max-width: 70px;
   }
   
-  /* 未被预约的状态 - 灰色 */
   &.available {
-    background: #bbbec4; /* 灰色背景 */
+    background: #bbbec4;
     
     .status-bar {
       background: #bbbec4;
@@ -1229,9 +1274,8 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
     }
   }
   
-  /* 已预约的状态 - 蓝色 */
   &.booked {
-    background: #1890ff; /* 蓝色背景 */
+    background: #1890ff;
     
     .status-bar {
       background: #1890ff;
@@ -1255,9 +1299,22 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
   }
   
   &:hover {
-    box-shadow: 0 4px 16px 0 rgba(23,105,255,0.10);
-    opacity: 0.95;
+    box-shadow: 0 4px 12px 0 rgba(0,0,0,0.15);
+    transform: translateY(-2px);
   }
+}
+
+/* 空白单元格样式 */
+.slot-empty {
+  min-height: 38px; /* 与slot-card保持一致 */
+  height: auto;
+  width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  border-radius: 5px; /* 与slot-card保持一致 */
+  background: #fafafa;
+  border: 1px dashed #e0e0e0;
+  flex: 1;
 }
 
 .course-detail {
@@ -1464,12 +1521,5 @@ const hasAnySlotInWeek = (timeSlot: string): boolean => {
       }
     }
   }
-}
-.slot-empty {
-  height: 60px;
-  width: 100%;
-  box-sizing: border-box;
-  border-right: 1px solid #f2f2f2;
-  border-bottom: 1px solid #f2f2f2;
 }
 </style>
