@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+// import { onMounted } from 'vue'
 import { useAppStore } from '@/stores'
 
 const appStore = useAppStore()
 
-onMounted(() => {
-  const s = document.createElement('script')
-  s.async = true
-  s.src = `https://cdn.wwads.cn/js/makemoney.js`
-  document.querySelector('.wwads-container')!.appendChild(s)
-})
+// onMounted(() => {
+//   const s = document.createElement('script')
+//   s.async = true
+//   s.src = `https://cdn.wwads.cn/js/makemoney.js`
+//   document.querySelector('.wwads-container')!.appendChild(s)
+// })
 </script>
 
 <template>

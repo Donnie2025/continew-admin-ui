@@ -103,7 +103,6 @@ const columns: TableInstance['columns'] = [
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
   { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime' },
-  { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId' },
   { title: '所属代理的ID', dataIndex: 'agentId', slotName: 'agentId' },
   {
     title: '操作',

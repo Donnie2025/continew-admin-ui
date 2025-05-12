@@ -104,22 +104,22 @@
   <!-- 课程详情弹窗 -->
   <a-modal
     v-model:visible="courseDetailVisible"
-    title="1对1预约详情"
+    title="课程详情"
     :footer="false"
     :mask-closable="false"
     :width="700"
   >
-    <div class="detail-header">
+    <div v-if="selectedCourse" class="detail-header">
       <div class="detail-title">
-        <div class="date-time">2025-05-05 19:00</div>
-        <div class="teacher">授课老师：Nest</div>
+        <div class="date-time">{{ selectedCourse.dateStr }} {{ selectedCourse.startTime }}</div>
+        <div class="teacher">授课老师：{{ currentTeacherName }}</div>
       </div>
       <div class="detail-actions">
-        <a-button type="primary">添加会员预约</a-button>
-        <a-button style="margin-left: 8px;" status="danger">删除</a-button>
+        <a-button type="primary" @click="handleAddStudentReservation">添加会员预约</a-button>
+        <a-button style="margin-left: 8px;" status="danger" @click="handleDeleteCourse">删除课时</a-button>
       </div>
     </div>
-    <div class="detail-classroom">
+    <div v-if="selectedCourse && selectedCourse.isOnline" class="detail-classroom">
       <div class="classroom-info">
         <div>在线教室</div>
         <div>上课工具：<span class="bold">ClassIn客户端</span></div>
@@ -135,30 +135,35 @@
         <a-button>取消在线教室</a-button>
       </div>
     </div>
+    <div v-else-if="selectedCourse" class="detail-classroom">
+      <div class="classroom-info">
+        <div>线下授课</div>
+        <div>本课时为线下授课，没有在线教室</div>
+      </div>
+      <div class="classroom-action">
+        <a-button type="primary">设置为在线教室</a-button>
+      </div>
+    </div>
     <a-tabs default-active-key="2" class="detail-tabs">
       <a-tab-pane key="2" title="已确认预约">
-        <div class="detail-table-custom">
+        <div v-if="selectedCourse && selectedCourse.studentName && selectedCourse.studentName !== '未被预约'" class="detail-table-custom">
           <div class="table-row">
             <div class="table-cell info">
               <div class="cell-title">预约信息</div>
               <div class="cell-content">
-                会员：YoYo8<br />
-                手机号：13269886955<br />
-                使用会员卡：线上月卡（20节）<br />
-                预约备注：<br />
+                会员：{{ selectedCourse.studentName }}<br />
+                手机号：--<br />
+                使用会员卡：--<br />
+                预约备注：--<br />
                 是否允许会员取消：是<br />
-                操作人：管理员<br />
-                操作时间：2025-04-25 22:00:43
+                操作人：--<br />
+                操作时间：--
               </div>
             </div>
             <div class="table-cell material">
               <div class="cell-title">教材</div>
               <div class="cell-content">
-                【B01】Kid's Box 剑桥国际少儿英语 1<br />
-                -Unit1<br />
-                -006 KB1 Unit3-1.ppt<br />
-                <br />
-                预览地址：<a href="https://sxqpz2thup5.feishu.cn/file/leePbMnvJo7qKpxeCmocuvHbnsb" target="_blank">https://sxqpz2thup5.feishu.cn/file/leePbMnvJo7qKpxeCmocuvHbnsb</a>
+                暂无教材信息
               </div>
             </div>
             <div class="table-cell action">
@@ -170,31 +175,13 @@
             </div>
           </div>
         </div>
+        <div v-else class="empty-reservations">
+          <a-empty description="暂无预约信息" />
+        </div>
       </a-tab-pane>
       <a-tab-pane key="3" title="历史记录">
-        <div class="history-table-custom">
-          <table>
-            <thead>
-              <tr>
-                <th>会员</th>
-                <th>手机号</th>
-                <th>备注</th>
-                <th>操作类型</th>
-                <th>操作时间</th>
-                <th>操作人</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Jack</td>
-                <td>15336388828</td>
-                <td></td>
-                <td>会员预约</td>
-                <td>2025-04-27 20:06:33</td>
-                <td>Jack</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="empty-history">
+          <a-empty description="暂无历史记录" />
         </div>
       </a-tab-pane>
     </a-tabs>
@@ -311,6 +298,7 @@ interface CourseSlot {
   status: 'booked' | 'available' | 'completed';
   startDate?: string; // 添加startDate字段
   isOnline?: boolean; // 添加isOnline字段表示是否在线
+  dateStr?: string // 添加可选的dateStr属性，用于格式化的日期字符串展示
 }
 
 // 教师数据从后端获取
@@ -592,36 +580,55 @@ const selectedCourse = ref<CourseSlot | null>(null)
 const handleCourseClick = (timeSlot: string, dayIndex: number) => {
   const slot = getCurrentWeekCourse(timeSlot, dayIndex)
   if (slot) {
-    // 显示询问弹窗
     const dateStr = dayjs(weekDays.value[dayIndex].fullDate).format('YYYY-MM-DD')
     
-    // 使用确认弹窗询问用户是否要删除
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除 ${dateStr} ${timeSlot} 的课时吗？`,
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { status: 'danger' },
-      onOk: () => {
-        // 确认删除
-        deleteSlot(slot.id)
-          .then(res => {
-            if (res.success) {
-              Message.success('课时已删除')
-              
-              // 仅刷新时间槽数据
-              loadTimeSlots()
-            } else {
-              Message.error('删除失败: ' + (res.msg || '未知错误'))
-            }
-          })
-          .catch(error => {
-            console.error('删除课时失败:', error)
-            Message.error('删除失败:' + (error.message || '未知错误'))
-          })
-      }
-    })
+    // 判断是否已被预约（studentName不为"未被预约"时表示已被预约）
+    const isBooked = slot.studentName && slot.studentName !== '未被预约';
+    
+    if (isBooked) {
+      // 已被预约的课时显示删除确认
+      Modal.confirm({
+        title: '确认删除',
+        content: `确定要删除 ${dateStr} ${timeSlot} 的已预约课时吗？`,
+        okText: '删除',
+        cancelText: '取消',
+        okButtonProps: { status: 'danger' },
+        onOk: () => {
+          // 确认删除
+          deleteSlot(slot.id)
+            .then(res => {
+              if (res.success) {
+                Message.success('课时已删除')
+                
+                // 仅刷新时间槽数据
+                loadTimeSlots()
+              } else {
+                Message.error('删除失败: ' + (res.msg || '未知错误'))
+              }
+            })
+            .catch(error => {
+              console.error('删除课时失败:', error)
+              Message.error('删除失败:' + (error.message || '未知错误'))
+            })
+        }
+      })
+    } else {
+      // 未被预约的课时打开预约界面
+      openReservationModal(slot, dayIndex, dateStr);
+    }
   }
+}
+
+// 打开预约界面
+const openReservationModal = (slot: CourseSlot, dayIndex: number, dateStr: string) => {
+  // 设置要显示的课程详情
+  selectedCourse.value = {
+    ...slot,
+    dateStr: dateStr // 添加格式化的日期字符串用于显示
+  };
+  
+  // 更新课程详情弹窗标题和内容
+  courseDetailVisible.value = true;
 }
 
 // 获取状态颜色
@@ -994,6 +1001,51 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   const slot = getCurrentWeekCourse(timeSlot, dayIndex)
   return !!slot?.isOnline
 }
+
+// 添加学员预约
+const handleAddStudentReservation = () => {
+  if (!selectedCourse.value) return;
+  
+  // 这里实现添加学员预约的逻辑
+  Message.info('添加会员预约功能待实现');
+  
+  // 可以在这里打开预约表单或跳转到预约页面
+}
+
+// 删除课时
+const handleDeleteCourse = () => {
+  if (!selectedCourse.value || !selectedCourse.value.id) return;
+  
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除 ${selectedCourse.value.dateStr} ${selectedCourse.value.startTime} 的课时吗？`,
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { status: 'danger' },
+    onOk: () => {
+      // 确认删除
+      deleteSlot(selectedCourse.value!.id)
+        .then(res => {
+          if (res.success) {
+            Message.success('课时已删除')
+            
+            // 关闭详情弹窗
+            courseDetailVisible.value = false;
+            selectedCourse.value = null;
+            
+            // 仅刷新时间槽数据
+            loadTimeSlots()
+          } else {
+            Message.error('删除失败: ' + (res.msg || '未知错误'))
+          }
+        })
+        .catch(error => {
+          console.error('删除课时失败:', error)
+          Message.error('删除失败:' + (error.message || '未知错误'))
+        })
+    }
+  })
+}
 </script>
 
 <style scoped lang="less">
@@ -1119,34 +1171,34 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
 .week-header {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-gap: 0 6px;
+  grid-gap: 0 6px; /* 与time-row保持一致的列间距 */
   border-bottom: 1px solid var(--color-border);
   background: #fff;
   border-radius: 20px 20px 0 0;
   overflow: hidden;
-  margin-bottom: 8px; /* 增加底部间距与时间行保持一致 */
-  padding: 0 6px;
+  margin-bottom: 6px;
+  padding: 0 6px; /* 添加左右内边距，与time-grid对齐 */
   
   .day-column {
-    padding: 12px 0 8px 0; /* 增加上下内边距 */
+    padding: 10px 0 6px 0;
     text-align: center;
-    border-right: none;
+    border-right: none; /* 移除右边框，改用grid-gap */
     
     .day-label {
       font-weight: 600;
-      font-size: 15px; /* 稍微增加字体大小 */
+      font-size: 14px;
     }
     
     .date-label {
       color: var(--color-text-3);
-      margin-top: 3px; /* 稍微增加间距 */
-      font-size: 14px; /* 稍微增加字体大小 */
+      margin-top: 2px;
+      font-size: 13px;
     }
   }
 }
 
 .time-grid {
-  padding: 8px 6px;
+  padding: 8px 6px; /* 增加左右内边距 */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1154,12 +1206,12 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   .time-row {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-gap: 0 6px;
+    grid-gap: 0 6px; /* 添加列间距 */
     border-bottom: 1px solid var(--color-border);
-    min-height: 42px; /* 增加行高 */
+    min-height: 36px;
     align-items: stretch;
     background: #fff;
-    margin-bottom: 8px; /* 稍微增加行间距 */
+    margin-bottom: 10px;
     &:last-child {
       margin-bottom: 0;
       border-bottom: none;
@@ -1167,9 +1219,9 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   }
   
   .time-cell {
-    min-height: 42px; /* 增加单元格高度 */
-    border-right: none;
-    padding: 3px; /* 增加内边距 */
+    min-height: 36px;
+    border-right: none; /* 移除右边框，改用grid-gap */
+    padding: 2px;
     position: relative;
     background: #fff;
     display: flex;
@@ -1183,16 +1235,16 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 38px;
+  min-height: 32px;
   height: auto;
-  border-radius: 5px;
+  border-radius: 4px;
   margin: 0;
   box-shadow: 0 1px 4px 0 rgba(0,0,0,0.06);
   background: #e5e6eb;
   cursor: pointer;
   transition: all 0.25s ease;
   position: relative;
-  padding: 6px 8px 6px 12px;
+  padding: 4px 6px 4px 10px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -1202,7 +1254,7 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: flex-start;
-    padding: 5px 5px 5px 10px;
+    padding: 4px 4px 4px 8px;
     
     .slot-time {
       font-size: 13px;
@@ -1226,7 +1278,7 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
     width: 3px;
     height: 70%;
     border-radius: 1px;
-    margin-right: 8px;
+    margin-right: 6px;
     background: #bcbcbc;
     flex-shrink: 0;
   }
@@ -1306,12 +1358,12 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
 
 /* 空白单元格样式 */
 .slot-empty {
-  min-height: 38px; /* 与slot-card保持一致 */
+  min-height: 32px;
   height: auto;
   width: 100%;
   margin: 0;
   box-sizing: border-box;
-  border-radius: 5px; /* 与slot-card保持一致 */
+  border-radius: 4px;
   background: #fafafa;
   border: 1px dashed #e0e0e0;
   flex: 1;

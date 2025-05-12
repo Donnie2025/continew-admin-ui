@@ -8,7 +8,7 @@ export interface StudentResp {
   email: string
   registerTime: string
   agentId: string
-  headImg: string
+  avatar: string
   password: string
   remark: string
   createTime: string
@@ -25,7 +25,7 @@ export interface StudentDetailResp {
   email: string
   registerTime: string
   agentId: string
-  headImg: string
+  avatar: string
   password: string
   remark: string
   status: string

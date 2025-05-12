@@ -169,7 +169,7 @@ const formColumns: ColumnItem[] = reactive([
     field: 'moduleName',
     type: 'input',
     props: {
-      placeholder: '项目模块名称，例如：continew-system',
+      placeholder: '项目模块名称，例如：continew-module-education',
       maxLength: 60,
       showWordLimit: true,
     },
@@ -180,7 +180,7 @@ const formColumns: ColumnItem[] = reactive([
     field: 'packageName',
     type: 'input',
     props: {
-      placeholder: '项目模块包名，例如：top.continew.admin.system',
+      placeholder: '项目模块包名，例如：top.continew.admin.education',
       maxLength: 60,
     },
     rules: [{ required: true, message: '请输入模块包名' }],
