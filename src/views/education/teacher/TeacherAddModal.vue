@@ -215,6 +215,12 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
+    label: '所属组',
+    field: 'groupName',
+    type: 'input',
+    span: 24,
+  },
+  {
     label: '单价',
     field: 'rate',
     type: 'input-number',

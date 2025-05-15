@@ -69,3 +69,8 @@ export function deleteStuCard(id: string) {
 export function exportStuCard(query: StuCardQuery) {
   return http.download(`${BASE_URL}/export`, query)
 }
+
+/** @desc 绑定会员卡 */
+export function bindStuCard(data: any) {
+  return http.post(`${BASE_URL}/bind`, data)
+}

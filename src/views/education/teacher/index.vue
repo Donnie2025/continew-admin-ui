@@ -15,6 +15,7 @@
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.name" placeholder="请输入教师姓名" allow-clear @search="search" />
 	    <a-input-search v-model="queryForm.isShow" placeholder="请输入是否展示" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.groupName" placeholder="请输入所属组" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -92,7 +93,8 @@ const { is_show, is_fixed, status } = useDict('is_show', 'is_fixed', 'status')
 
 const queryForm = reactive<TeacherQuery>({
   name: undefined,
-  isShow: undefined
+  isShow: undefined,
+  groupName: undefined
 })
 
 const {
@@ -108,6 +110,7 @@ const columns: TableInstance['columns'] = [
   { title: '性别', dataIndex: 'gender', slotName: 'gender' },
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
+  { title: '所属组', dataIndex: 'groupName', slotName: 'groupName' },
   { title: '单价', dataIndex: 'rate', slotName: 'rate' },
   { title: '评分', dataIndex: 'score', slotName: 'score' },
   { title: '标签', dataIndex: 'tags', slotName: 'tags' },
@@ -129,6 +132,7 @@ const columns: TableInstance['columns'] = [
 const reset = () => {
   queryForm.name = undefined
   queryForm.isShow = undefined
+  queryForm.groupName = undefined
   search()
 }
 

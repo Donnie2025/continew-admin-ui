@@ -184,7 +184,7 @@ import { useWindowSize } from '@vueuse/core'
 import { ref, computed, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { getStudent } from '@/apis/education/student'
-import { listStuCard, addStuCard } from '@/apis/education/stuCard'
+import { listStuCard, addStuCard, bindStuCard } from '@/apis/education/stuCard'
 import { listTransaction } from '@/apis/education/transaction'
 import { listActiveCards } from '@/apis/education/card'
 import { useDict } from '@/hooks/app'
@@ -340,11 +340,27 @@ const handleBindCard = async () => {
   // 绑定会员卡的逻辑
   bindCardLoading.value = true
   try {
+    const selectedCard = bindCardForm.cardList.find(card => card.id === bindCardForm.cardId)
+    if (!selectedCard) {
+      Message.error('选择的会员卡不存在')
+      bindCardLoading.value = false
+      return
+    }
+    
+    // 确保cardName有值
+    const cardName = selectedCard.name
+    if (!cardName) {
+      Message.error('会员卡名称不能为空')
+      bindCardLoading.value = false
+      return
+    }
+    console.log("cardName is: " + cardName)
+    
     const params = {
       stuId: dataId.value,
       stuName: dataDetail.value.name,
       cardId: bindCardForm.cardId,
-      cardName: bindCardForm.cardList.find(card => card.id === bindCardForm.cardId)?.name,
+      cardName: cardName,
       cardType: bindCardForm.cardType,
       balance: bindCardForm.balance, // 充值次数
       expireDate: isUnlimitedCard.value ? null : new Date(Date.now() + Number(bindCardForm.validDays) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
@@ -353,7 +369,7 @@ const handleBindCard = async () => {
       remark: bindCardForm.remark // 备注
     }
     
-    await addStuCard(params)
+    await bindStuCard(params)
     Message.success('绑定会员卡成功')
     showBindCardModal.value = false
     // 刷新会员卡列表

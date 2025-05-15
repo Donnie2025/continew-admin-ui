@@ -18,6 +18,7 @@ export interface TeacherResp {
   videoUrl: string
   briefIntro: string
   description: string
+  groupName: string
   sort: string
   status: string
   createTime: string
@@ -28,8 +29,8 @@ export interface TeacherResp {
 }
 
 /** @desc 查询所有状态为活跃的教师列表 */
-export function listActiveTeachers() {
-  return http.get<TeacherResp[]>(`${BASE_URL}/active`)
+export function listActiveTeachers(name?: string) {
+  return http.get<TeacherResp[]>(`${BASE_URL}/active`, { name })
 }
 
 export interface TeacherDetailResp {
@@ -48,6 +49,7 @@ export interface TeacherDetailResp {
   videoUrl: string
   briefIntro: string
   description: string
+  groupName: string
   sort: string
   status: string
   createTime: string
@@ -57,11 +59,14 @@ export interface TeacherDetailResp {
   createUserString: string
   updateUserString: string
 }
+
 export interface TeacherQuery {
   name: string | undefined
   teacherNo: string | undefined
   isShow: string | undefined
+  groupName: string | undefined
 }
+
 export interface TeacherPageQuery extends TeacherQuery, PageQuery {}
 
 /** @desc 查询教师列表 */

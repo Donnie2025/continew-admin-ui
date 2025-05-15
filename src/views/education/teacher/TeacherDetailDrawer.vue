@@ -11,6 +11,7 @@
       <a-descriptions-item label="是否固定">{{ dataDetail?.isFixed === '1' ? '是' : '否' }}</a-descriptions-item>
       <a-descriptions-item label="手机号码">{{ dataDetail?.phone }}</a-descriptions-item>
       <a-descriptions-item label="邮箱">{{ dataDetail?.email }}</a-descriptions-item>
+      <a-descriptions-item label="所属组">{{ dataDetail?.groupName }}</a-descriptions-item>
       <a-descriptions-item label="头像">
         <a-image
           v-if="dataDetail?.avatar"
