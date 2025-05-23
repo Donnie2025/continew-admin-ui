@@ -113,6 +113,7 @@
       <div class="detail-title">
         <div class="date-time">{{ selectedCourse.dateStr }} {{ selectedCourse.startTime }}</div>
         <div class="teacher">授课老师：{{ currentTeacherName }}</div>
+        <div class="student-count">学生数量：{{ selectedCourse.studentCount || 1 }}</div>
       </div>
       <div class="detail-actions">
         <a-button type="primary" @click="handleAddStudentReservation">添加会员预约</a-button>
@@ -207,6 +208,10 @@
         <a-switch v-model="editCourse.isOnline" />
         <span class="desc">开启后会生成在线教室</span>
       </a-form-item>
+      <a-form-item label="学生数量" field="studentCount">
+        <a-input-number v-model="editCourse.studentCount" :min="1" :precision="0" style="width: 100%" :default-value="1" />
+        <span class="desc">默认为1人</span>
+      </a-form-item>
       <a-form-item label="课时时长" field="duration">
         <a-input-number v-model="editCourse.duration" :min="5" :max="120" :step="5" style="width: 100%" />
         <span class="desc">单位：分钟</span>
@@ -245,6 +250,11 @@
           allow-clear
         />
         <span class="desc">选择课程日期范围</span>
+      </div>
+      <div class="row">
+        <span class="label">学生数量：</span>
+        <a-input-number v-model="addSlotForm.studentCount" :min="1" :precision="0" :default-value="1" style="width: 120px;" />
+        <span class="desc">默认为1人</span>
       </div>
       <div class="time-section">
         <div class="period-block">
@@ -289,16 +299,18 @@ import { listActiveTeachers } from '@/apis/education/teacher'
 import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableSlots } from '@/apis/education/slot'
 import dayjs from 'dayjs'
 
-interface CourseSlot {
+// 选中的课程数据类型
+interface CourseItem {
   id: string;
   studentName: string;
   teacherId: number;
   startTime: string;
   weekday: number | boolean;
   status: 'booked' | 'available' | 'completed';
-  startDate?: string; // 添加startDate字段
-  isOnline?: boolean; // 添加isOnline字段表示是否在线
-  dateStr?: string // 添加可选的dateStr属性，用于格式化的日期字符串展示
+  startDate?: string;
+  isOnline?: boolean;
+  dateStr?: string;
+  studentCount?: number;
 }
 
 // 教师数据从后端获取
@@ -482,7 +494,7 @@ const handleToday = () => {
   loadCourseData() // 重新加载数据
 }
 
-const courseSlots = reactive<CourseSlot[]>([])
+const courseSlots = reactive<CourseItem[]>([])
 
 // 加载课程数据
 const loadCourseData = () => {
@@ -574,7 +586,7 @@ const getSlotStudent = (timeSlot: string, dayIndex: number) => {
 
 // 课程详情相关
 const courseDetailVisible = ref(false)
-const selectedCourse = ref<CourseSlot | null>(null)
+const selectedCourse = ref<CourseItem | null>(null)
 
 // 处理课程点击
 const handleCourseClick = (timeSlot: string, dayIndex: number) => {
@@ -620,7 +632,7 @@ const handleCourseClick = (timeSlot: string, dayIndex: number) => {
 }
 
 // 打开预约界面
-const openReservationModal = (slot: CourseSlot, dayIndex: number, dateStr: string) => {
+const openReservationModal = (slot: CourseItem, dayIndex: number, dateStr: string) => {
   // 设置要显示的课程详情
   selectedCourse.value = {
     ...slot,
@@ -687,6 +699,7 @@ const handleAddCourse = (timeSlot: string, dayIndex: number) => {
     dateLabel: weekDays.value[dayIndex].date,
     formattedDate: dayjs(currentDate).format('YYYY-MM-DD'), // 用于API请求
     status: 'available', // 默认为可用状态
+    studentCount: 1, // 默认学生数量为1
     remark: ''
   })
   editModalVisible.value = true
@@ -694,7 +707,7 @@ const handleAddCourse = (timeSlot: string, dayIndex: number) => {
 }
 
 // 打开编辑弹窗
-const handleEditCourse = (slot: CourseSlot, dayIndex: number) => {
+const handleEditCourse = (slot: CourseItem, dayIndex: number) => {
   isEditMode.value = true
   Object.assign(editCourse, {
     ...slot,
@@ -716,8 +729,9 @@ const handleEditSave = () => {
         teacherName: currentTeacherName.value,
         startDate: formattedDate,
         startTime: editCourse.startTime,
-        isOnline: addSlotForm.value.online,
-        duration: 30, // 默认30分钟
+        isOnline: editCourse.isOnline,
+        duration: editCourse.duration || 30, // 默认30分钟
+        studentCount: editCourse.studentCount || 1 // 默认学生数量为1
       }
       
       // 调用创建API
@@ -794,6 +808,7 @@ const addSlotForm = ref<{
   dateRange: any; // 日期范围
   timeType: string;
   times: string[];
+  studentCount: number;
 }>({
   online: true,
   tool: 'classin_api',
@@ -802,6 +817,7 @@ const addSlotForm = ref<{
   dateRange: null, // 初始为null
   timeType: '30',
   times: [],
+  studentCount: 1,
 })
 
 
@@ -828,6 +844,7 @@ const handleAddSlot = () => {
     dateRange: null,
     timeType: '30',
     times: [],
+    studentCount: 1,
   }
   console.log('打开添加课程弹窗，初始化表单:', addSlotForm.value);
   addSlotVisible.value = true
@@ -869,7 +886,8 @@ const handleAddSlotOk = async () => {
       meetingId: addSlotForm.value.meetingId,
       meetingUrl: addSlotForm.value.meetingUrl,
       dates: formattedDates,
-      times: addSlotForm.value.times
+      times: addSlotForm.value.times,
+      studentCount: addSlotForm.value.studentCount || 1 // 添加学生数量字段
     };
     
     // 打印请求数据，用于调试
@@ -914,6 +932,8 @@ const handleAddSlotOk = async () => {
 const handleAddSlotCancel = () => {
   addSlotVisible.value = false
   addSlotForm.value.dateRange = null
+  addSlotForm.value.times = []
+  addSlotForm.value.studentCount = 1
 }
 
 const allChecked = ref({ morning: false, afternoon: false, evening: false, night: false })
@@ -1400,6 +1420,10 @@ const handleDeleteCourse = () => {
     .teacher {
       font-size: 16px;
       color: var(--color-text-2);
+    }
+    .student-count {
+      font-size: 14px;
+      color: var(--color-text-3);
     }
   }
   .detail-actions {

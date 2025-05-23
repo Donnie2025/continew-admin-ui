@@ -54,6 +54,7 @@ export interface BatchSlotReq {
   institutionId?: number | string
   dates: string[]
   times: string[]
+  studentCount?: number
 }
 
 /** @desc 查询课程管理列表 */

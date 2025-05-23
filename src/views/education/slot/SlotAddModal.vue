@@ -35,7 +35,7 @@ const formRef = ref<InstanceType<typeof GiForm>>()
 const { yes_no,status } = useDict('yes_no','status')
 
 const [form, resetForm] = useResetReactive({
-  // todo 待补充
+  studentCount: 1
 })
 
 const columns: ColumnItem[] = reactive([
@@ -72,6 +72,18 @@ const columns: ColumnItem[] = reactive([
     field: 'duration',
     type: 'input',
     span: 24,
+  },
+  {
+    label: '学生数量',
+    field: 'studentCount',
+    type: 'input-number',
+    span: 24,
+    props: {
+      min: 0,
+      precision: 0,
+      placeholder: '请输入学生数量',
+      defaultValue: 1
+    }
   },
   {
     label: '是否在线教室（0：否；1：是）',
