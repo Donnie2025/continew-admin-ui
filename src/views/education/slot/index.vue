@@ -288,6 +288,87 @@
       <a-button @click="handleAddSlotCancel">取消</a-button>
     </template>
   </a-modal>
+
+  <!-- 添加会员预约弹窗 -->
+  <a-modal
+    v-model:visible="studentReservationVisible"
+    title="添加会员预约"
+    :mask-closable="false"
+    :width="700"
+    @cancel="handleStudentReservationCancel"
+    @ok="handleStudentReservationOk"
+  >
+    <div class="reservation-form">
+      <a-form :model="reservationForm" layout="vertical">
+        <a-form-item field="studentId" label="选择会员：" required>
+          <a-select
+            v-model="reservationForm.studentId"
+            placeholder="输入名字或手机号搜索会员"
+            allow-search
+            allow-clear
+            :loading="memberSearchLoading"
+            :filter-option="false"
+            @search="handleSearchMember"
+            style="width: 100%"
+          >
+            <a-option
+              v-for="member in searchedMembers"
+              :key="member.id"
+              :value="member.id"
+            >
+              {{ member.name || '未知' }} {{ member.phone ? `(${member.phone})` : '' }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item field="cardId" label="使用会员卡：" required>
+          <div class="card-selection">
+            <a-select
+              v-model="reservationForm.cardId"
+              placeholder="请选择会员拥有的会员卡"
+              :disabled="!selectedMember || memberCards.length === 0"
+              @change="(val) => console.log('会员卡选择变更:', val)"
+            >
+              <a-option
+                v-for="card in memberCards"
+                :key="card.id"
+                :value="card.id"
+                :disabled="card.disabled"
+              >
+                {{ card.name }} (剩余: {{ card.balance }}次)
+                <span v-if="card.disabled" style="color: #ff4d4f; margin-left: 8px;">
+                  {{ card.balance <= 0 ? '余额不足' : '已停用' }}
+                </span>
+              </a-option>
+            </a-select>
+            <a-button type="outline" @click="handleRefreshCards">刷新会员卡</a-button>
+          </div>
+          <!-- 添加隐藏的input元素绑定cardId，确保表单验证正常工作 -->
+          <input type="hidden" :value="reservationForm.cardId" />
+        </a-form-item>
+
+        <a-form-item field="materialId" label="教材：">
+          <a-select v-model="reservationForm.materialId" placeholder="请选择">
+            <a-option
+              v-for="material in materials"
+              :key="material.id"
+              :value="material.id"
+            >
+              {{ material.name }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item field="remark" label="备注：">
+          <a-textarea
+            v-model="reservationForm.remark"
+            placeholder="请输入预约备注"
+            :auto-size="{ minRows: 3, maxRows: 5 }"
+          />
+        </a-form-item>
+      </a-form>
+    </div>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -298,6 +379,9 @@ import { Message, Modal } from '@arco-design/web-vue'
 import { listActiveTeachers } from '@/apis/education/teacher'
 import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableSlots } from '@/apis/education/slot'
 import dayjs from 'dayjs'
+import { searchMembers, getMemberCards } from '@/apis/member/index'
+import { listMaterials } from '@/apis/education/material'
+import { createReservation } from '@/apis/education/reservation'
 
 // 选中的课程数据类型
 interface CourseItem {
@@ -1022,14 +1106,257 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   return !!slot?.isOnline
 }
 
-// 添加学员预约
+// 添加会员预约相关
+const studentReservationVisible = ref(false)
+const reservationForm = reactive({
+  studentId: null as string | null,
+  cardId: '' as string,
+  materialId: null as string | null,
+  remark: ''
+})
+const selectedMember = ref<any>(null)
+const searchedMembers = ref<any[]>([])
+const memberCards = ref<any[]>([])
+const materials = ref<any[]>([])
+const cardWarning = ref(false)
+const memberSearchLoading = ref(false)
+const debug = ref(false) // 设置为false以隐藏调试信息
+
+// 打开添加会员预约弹窗
 const handleAddStudentReservation = () => {
-  if (!selectedCourse.value) return;
+  if (!selectedCourse.value) {
+    Message.error('请先选择一个课时')
+    return
+  }
   
-  // 这里实现添加学员预约的逻辑
-  Message.info('添加会员预约功能待实现');
+  // 重置表单
+  Object.assign(reservationForm, {
+    studentId: null,
+    cardId: '',
+    materialId: null,
+    remark: ''
+  })
+  selectedMember.value = null
+  searchedMembers.value = []
+  memberCards.value = []
+  cardWarning.value = false
   
-  // 可以在这里打开预约表单或跳转到预约页面
+  // 预加载一些会员数据，以便用户可以直接选择
+  handleSearchMember('');
+  
+  // 加载教材列表
+  loadMaterials()
+  
+  // 显示弹窗
+  studentReservationVisible.value = true
+}
+
+// 加载教材列表
+const loadMaterials = () => {
+  listMaterials()
+    .then(res => {
+      if (res && res.data) {
+        materials.value = res.data
+      } else {
+        materials.value = []
+      }
+    })
+    .catch(error => {
+      console.error('加载教材列表失败:', error)
+      materials.value = []
+    })
+}
+
+// 防抖函数
+const debounce = (fn: Function, delay: number) => {
+  let timer: any = null
+  return function(this: any, ...args: any[]) {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  }
+}
+
+// 搜索会员
+const handleSearchMember = debounce((keyword: string) => {
+  memberSearchLoading.value = true;
+  
+  searchMembers(keyword)
+    .then(res => {
+      try {
+        // 从图片看到，API返回格式是：
+        // { code: "0", msg: "ok", success: true, data: { data: [...会员数组...] } }
+        if (res && res.data && res.data.data && Array.isArray(res.data.data)) {
+          // 根据图片显示，会员数据在 res.data.data 数组中
+          searchedMembers.value = res.data.data;
+        } else if (res && res.data && Array.isArray(res.data)) {
+          // 兼容直接返回数组的情况
+          searchedMembers.value = res.data;
+      } else {
+          searchedMembers.value = [];
+        }
+      } catch (error) {
+        console.error('处理搜索结果出错:', error);
+        searchedMembers.value = [];
+      }
+    })
+    .catch(error => {
+      console.error('搜索会员失败:', error);
+      searchedMembers.value = [];
+    })
+    .finally(() => {
+      memberSearchLoading.value = false;
+    });
+}, 300);
+
+// 监听studentId变化，更新selectedMember和加载会员卡
+watch(() => reservationForm.studentId, (newVal) => {
+  if (newVal) {
+    const member = searchedMembers.value.find(item => String(item.id) === String(newVal));
+    if (member) {
+      selectedMember.value = member;
+      loadMemberCards(newVal);
+    }
+  } else {
+    selectedMember.value = null;
+    memberCards.value = [];
+  }
+}, { immediate: false });
+
+// 加载会员卡
+const loadMemberCards = (studentId: string | number) => {
+  if (!studentId) return
+  
+  memberCards.value = []
+  cardWarning.value = false
+  console.log('开始加载会员卡，会员ID:', studentId)
+  
+  getMemberCards(studentId, selectedCourse.value?.teacherId)
+    .then(res => {
+      console.log('会员卡加载结果:', res)
+      if (res && res.data && res.data.length > 0) {
+        memberCards.value = res.data.map(card => {
+          // 确保id是字符串类型
+          const cardId = card.id ? String(card.id) : '';
+          return {
+            ...card,
+            id: cardId,
+            disabled: card.status === 0 || card.remainingTimes <= 0
+          };
+        });
+        
+        cardWarning.value = false
+        
+        console.log('处理后的会员卡数据:', memberCards.value)
+        
+        // 自动选择会员卡
+        const availableCards = memberCards.value.filter(card => !card.disabled);
+        console.log('可用会员卡:', availableCards)
+        
+        if (availableCards.length > 0) {
+          reservationForm.cardId = availableCards[0].id;
+          console.log('自动选择会员卡:', reservationForm.cardId)
+        } else {
+          reservationForm.cardId = '';
+          cardWarning.value = true
+          console.log('没有可用会员卡')
+        }
+      } else {
+        memberCards.value = []
+        cardWarning.value = true
+        console.log('API返回的会员卡数据为空')
+      }
+    })
+    .catch(error => {
+      console.error('加载会员卡失败:', error)
+      memberCards.value = []
+      cardWarning.value = true
+    })
+}
+
+// 刷新会员卡
+const handleRefreshCards = () => {
+  if (!selectedMember.value || !selectedMember.value.id) {
+    Message.warning('请先选择会员')
+    return
+  }
+  
+  loadMemberCards(selectedMember.value.id)
+  Message.success('会员卡已刷新')
+}
+
+// 跳转到会员卡管理
+const goToCardManagement = () => {
+  // 这里可以使用路由导航到会员卡管理页面
+  // router.push('/member/card')
+  window.open('/member/card', '_blank')
+}
+
+// 提交预约
+const handleStudentReservationOk = () => {
+  // 表单验证
+  if (!reservationForm.studentId) {
+    Message.error('请选择会员')
+    return
+  }
+  
+  if (!reservationForm.cardId) {
+    Message.error('请选择会员卡')
+    return
+  }
+  
+  if (!selectedCourse.value || !selectedCourse.value.id) {
+    Message.error('课时信息不完整')
+    return
+  }
+  
+  console.log('提交预约数据，会员卡ID:', reservationForm.cardId, '类型:', typeof reservationForm.cardId)
+  
+  // 确保 ID 是数字类型
+  const studentId = typeof reservationForm.studentId === 'string' ? parseInt(reservationForm.studentId, 10) : reservationForm.studentId;
+  
+  console.log('转换后的会员卡ID:', reservationForm.cardId, '类型:', typeof reservationForm.cardId)
+  
+  // 构建请求数据
+  const requestData = {
+    slotId: selectedCourse.value.id,
+    studentId: studentId,
+    cardId: typeof reservationForm.cardId === 'string' ? parseInt(reservationForm.cardId, 10) : reservationForm.cardId,
+    materialId: reservationForm.materialId ? (typeof reservationForm.materialId === 'string' ? parseInt(reservationForm.materialId, 10) : reservationForm.materialId) : null,
+    remark: reservationForm.remark,
+    teacherId: selectedCourse.value.teacherId,
+    createUser: 1 // 添加创建人ID，这里使用默认值1
+  }
+  
+  console.log('发送预约请求数据:', requestData)
+  
+  // 调用创建预约API
+  createReservation(requestData)
+    .then(res => {
+      console.log('预约响应:', res)
+      if (res.success) {
+        Message.success('预约成功')
+        studentReservationVisible.value = false
+        
+        // 刷新课时数据
+        loadTimeSlots()
+        
+        // 关闭课时详情弹窗
+        courseDetailVisible.value = false
+      } else {
+        Message.error('预约失败: ' + (res.msg || '未知错误'))
+      }
+    })
+    .catch(error => {
+      console.error('创建预约失败:', error)
+      Message.error('预约失败: ' + (error.message || '未知错误'))
+    })
+}
+
+// 取消预约
+const handleStudentReservationCancel = () => {
+  studentReservationVisible.value = false
 }
 
 // 删除课时
@@ -1594,6 +1921,110 @@ const handleDeleteCourse = () => {
           font-size: 15px;
           justify-content: flex-start;
         }
+      }
+    }
+  }
+}
+
+/* 添加会员预约相关样式 */
+.reservation-form {
+  .member-option {
+    display: flex;
+    align-items: center;
+    
+    .member-avatar {
+      margin-right: 12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      span {
+        font-size: 14px;
+        color: #666;
+      }
+    }
+    
+    .member-info-dropdown {
+      flex: 1;
+      
+      .member-name {
+        font-weight: 500;
+        font-size: 14px;
+      }
+      
+      .member-phone {
+        color: var(--color-text-3);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+    }
+  }
+  
+  .selected-member {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--color-fill-2);
+    border-radius: 4px;
+    
+    .member-info {
+      display: flex;
+      align-items: center;
+      
+      .label {
+        font-weight: 500;
+        margin-right: 8px;
+      }
+      
+      .value {
+        font-weight: 600;
+        color: var(--color-text-1);
+        margin-right: 12px;
+      }
+      
+      .phone {
+        color: var(--color-text-3);
+      }
+    }
+  }
+  
+  .card-selection {
+    display: flex;
+    gap: 12px;
+    
+    .arco-select {
+      flex: 1;
+    }
+  }
+  
+  .card-warning {
+    margin-top: 12px;
+    padding: 12px;
+    background: #fff9e6;
+    border: 1px solid #ffe58f;
+    border-radius: 4px;
+    
+    .warning-title {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .warning-item {
+      margin-bottom: 4px;
+      
+      a {
+        color: #1677ff;
+        cursor: pointer;
       }
     }
   }
