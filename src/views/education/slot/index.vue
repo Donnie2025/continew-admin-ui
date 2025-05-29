@@ -56,9 +56,14 @@
         </div>
       </div>
       <div class="schedule-grid">
+        <!-- 添加星期几显示行 -->
+        <div class="weekday-header">
+          <div v-for="day in weekDays" :key="day.date" class="weekday-cell">
+            <div class="weekday-name">{{ day.label }}</div>
+          </div>
+        </div>
         <div class="week-header">
           <div v-for="day in weekDays" :key="day.date" class="day-column">
-            <div class="day-label">{{ day.label }}</div>
             <div class="date-label">{{ day.date }}</div>
           </div>
         </div>
@@ -82,7 +87,9 @@
                 <span class="status-bar" :class="getSlotInfo(timeSlot, dayIndex).status"></span>
                 <span class="slot-content">
                   <span class="slot-time">{{ timeSlot }}</span>
-                  <span v-if="getSlotInfo(timeSlot, dayIndex).studentName" class="slot-student">{{ getSlotInfo(timeSlot, dayIndex).studentName }}</span>
+                  <a-tooltip v-if="getSlotInfo(timeSlot, dayIndex).studentName" :content="getSlotInfo(timeSlot, dayIndex).studentName.split('\n').join(', ')">
+                    <span class="slot-student" v-html="getSlotInfo(timeSlot, dayIndex).studentName.replace(/\n/g, '<br>')"></span>
+                  </a-tooltip>
                 </span>
               </div>
                   <!-- 没有数据时显示空白 -->
@@ -147,12 +154,24 @@
     </div>
     <a-tabs default-active-key="2" class="detail-tabs">
       <a-tab-pane key="2" title="已确认预约">
-        <div v-if="selectedCourse && selectedCourse.studentName && selectedCourse.studentName !== '未被预约'" class="detail-table-custom">
+        <div v-if="selectedCourse && ((selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0) || (selectedCourse.studentName && selectedCourse.studentName !== '未被预约'))" class="detail-table-custom">
           <div class="table-row">
             <div class="table-cell info">
               <div class="cell-title">预约信息</div>
               <div class="cell-content">
+                <!-- 如果有学生列表，显示所有学生 -->
+                <template v-if="selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0">
+                  <div>
+                    <strong>预约学生：</strong>
+                    <div v-for="(student, index) in selectedCourse.studentNameList" :key="index" class="student-item">
+                      {{ student }}
+                    </div>
+                  </div>
+                </template>
+                <!-- 否则显示单个学生 -->
+                <template v-else>
                 会员：{{ selectedCourse.studentName }}<br />
+                </template>
                 手机号：--<br />
                 使用会员卡：--<br />
                 预约备注：--<br />
@@ -387,6 +406,7 @@ import { createReservation } from '@/apis/education/reservation'
 interface CourseItem {
   id: string;
   studentName: string;
+  studentNameList: string[];
   teacherId: number;
   startTime: string;
   weekday: number | boolean;
@@ -456,6 +476,7 @@ const loadTimeSlots = () => {
         courseSlots.push({
           id: slot.id ? String(slot.id) : '0',
           studentName: '未被预约',
+          studentNameList: [],
           teacherId: teacherId,
           startTime: slot.time,
           weekday: slot.weekday,
@@ -605,19 +626,31 @@ const loadCourseData = () => {
       
       // 将API返回的数据转换为courseSlots需要的格式
       slots.forEach((slot: any) => {
+        // 判断是否有学生预约
+        const hasStudents = (slot.studentNameList && slot.studentNameList.length > 0) || 
+                           (slot.studentName && slot.studentName !== '未被预约');
+        
         courseSlots.push({
           id: String(slot.id || 0),
-          studentName: '未被预约',
+          studentName: slot.studentName || '未被预约',
+          studentNameList: slot.studentNameList || [],
           teacherId: slot.teacherId ? Number(slot.teacherId) : 0,
           startTime: slot.startTime,
           weekday: slot.weekday || 0,
-          status: 'available',
+          status: hasStudents ? 'booked' : 'available',
           startDate: slot.startDate,
           isOnline: slot.isOnline
         })
       })
       
+      // 提取唯一的时间段并更新timeSlots
+      const uniqueTimes = [...new Set(slots.map((slot: any) => slot.startTime))].sort();
+      timeSlots.value = uniqueTimes;
+      
       console.log('已加载课时数据:', courseSlots.length, '条记录')
+      
+      // 重新加载时间槽，确保UI更新
+      // loadTimeSlots()
     }
   })
   .catch(error => {
@@ -629,16 +662,16 @@ const loadCourseData = () => {
 // 监听教师和日期变化，重新加载数据
 watch(() => selectedTeacherId.value, (newVal) => {
   if (newVal) {
-    // 暂时只加载时间槽
-    loadTimeSlots()
+    // 加载课时数据
+    loadCourseData()
   } else {
     courseSlots.splice(0, courseSlots.length)
   }
 })
 
 watch(() => currentMonday.value, () => {
-  // 暂时只加载时间槽
-  loadTimeSlots()
+  // 加载课时数据
+  loadCourseData()
 })
 
 // 课程过滤：只显示选中老师或全部
@@ -678,40 +711,8 @@ const handleCourseClick = (timeSlot: string, dayIndex: number) => {
   if (slot) {
     const dateStr = dayjs(weekDays.value[dayIndex].fullDate).format('YYYY-MM-DD')
     
-    // 判断是否已被预约（studentName不为"未被预约"时表示已被预约）
-    const isBooked = slot.studentName && slot.studentName !== '未被预约';
-    
-    if (isBooked) {
-      // 已被预约的课时显示删除确认
-      Modal.confirm({
-        title: '确认删除',
-        content: `确定要删除 ${dateStr} ${timeSlot} 的已预约课时吗？`,
-        okText: '删除',
-        cancelText: '取消',
-        okButtonProps: { status: 'danger' },
-        onOk: () => {
-          // 确认删除
-          deleteSlot(slot.id)
-            .then(res => {
-              if (res.success) {
-                Message.success('课时已删除')
-                
-                // 仅刷新时间槽数据
-                loadTimeSlots()
-              } else {
-                Message.error('删除失败: ' + (res.msg || '未知错误'))
-              }
-            })
-            .catch(error => {
-              console.error('删除课时失败:', error)
-              Message.error('删除失败:' + (error.message || '未知错误'))
-            })
-        }
-      })
-    } else {
-      // 未被预约的课时打开预约界面
+    // 无论是否已被预约，都打开课程详情弹窗
       openReservationModal(slot, dayIndex, dateStr);
-    }
   }
 }
 
@@ -860,20 +861,29 @@ const handleCellClick = (timeSlot: string, dayIndex: number) => {
 const getSlotInfo = (timeSlot: string, dayIndex: number) => {
   const slot = getCurrentWeekCourse(timeSlot, dayIndex)
   if (slot) {
-    // 判断是否有学生预约，如果显示的是"未被预约"，则状态为available
-    const isBooked = slot.studentName && slot.studentName !== '未被预约';
+    // 判断是否有学生预约
+    const hasStudents = (slot.studentNameList && slot.studentNameList.length > 0) || 
+                       (slot.studentName && slot.studentName !== '未被预约');
+    
+    // 获取显示的学生姓名
+    let displayName = '未被预约';
+    if (slot.studentNameList && slot.studentNameList.length > 0) {
+      // 如果有学生名单，显示所有学生姓名，每个学生一行
+      displayName = slot.studentNameList.join('\n');
+    } else if (slot.studentName && slot.studentName !== '未被预约') {
+      // 否则使用单个学生姓名
+      displayName = slot.studentName;
+    }
     
     return {
-      status: isBooked ? 'booked' : 'available', // 根据是否有学生名判断状态
-      studentName: isBooked ? slot.studentName : '未被预约', // 有学生名显示学生名，否则显示"未被预约"
-      time: timeSlot,
+      status: hasStudents ? 'booked' : 'available', // 根据是否有学生判断状态
+      studentName: displayName, // 显示学生姓名列表或单个学生姓名
       isOnline: slot.isOnline // 传递isOnline状态
     }
   }
   return {
     status: 'empty',
     studentName: '',
-    time: timeSlot,
     isOnline: false
   }
 }
@@ -1316,13 +1326,27 @@ const handleStudentReservationOk = () => {
   // 确保 ID 是数字类型
   const studentId = typeof reservationForm.studentId === 'string' ? parseInt(reservationForm.studentId, 10) : reservationForm.studentId;
   
-  console.log('转换后的会员卡ID:', reservationForm.cardId, '类型:', typeof reservationForm.cardId)
+  // 确保会员卡ID是有效的数字
+  let stuCardId: number;
+  try {
+    stuCardId = typeof reservationForm.cardId === 'string' ? parseInt(reservationForm.cardId, 10) : Number(reservationForm.cardId);
+    if (isNaN(stuCardId) || stuCardId <= 0) {
+      Message.error('会员卡ID无效，请重新选择会员卡');
+      return;
+    }
+  } catch (error) {
+    console.error('会员卡ID转换失败:', error);
+    Message.error('会员卡ID无效，请重新选择会员卡');
+    return;
+  }
+  
+  console.log('转换后的会员卡ID:', stuCardId, '类型:', typeof stuCardId);
   
   // 构建请求数据
   const requestData = {
     slotId: selectedCourse.value.id,
     studentId: studentId,
-    cardId: typeof reservationForm.cardId === 'string' ? parseInt(reservationForm.cardId, 10) : reservationForm.cardId,
+    stuCardId: stuCardId, // 修改字段名为stuCardId
     materialId: reservationForm.materialId ? (typeof reservationForm.materialId === 'string' ? parseInt(reservationForm.materialId, 10) : reservationForm.materialId) : null,
     remark: reservationForm.remark,
     teacherId: selectedCourse.value.teacherId,
@@ -1340,17 +1364,23 @@ const handleStudentReservationOk = () => {
         studentReservationVisible.value = false
         
         // 刷新课时数据
-        loadTimeSlots()
+        loadCourseData()
         
         // 关闭课时详情弹窗
         courseDetailVisible.value = false
       } else {
-        Message.error('预约失败: ' + (res.msg || '未知错误'))
+        // 显示后端返回的具体错误信息
+        Message.error(res.msg || '预约失败: 未知错误')
       }
     })
     .catch(error => {
       console.error('创建预约失败:', error)
+      // 显示更友好的错误信息
+      if (error.response && error.response.data && error.response.data.msg) {
+        Message.error('预约失败: ' + error.response.data.msg)
+      } else {
       Message.error('预约失败: ' + (error.message || '未知错误'))
+      }
     })
 }
 
@@ -1515,9 +1545,29 @@ const handleDeleteCourse = () => {
   }
 }
 
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列布局 */
+  grid-gap: 0 6px; /* 与time-row保持一致的列间距 */
+  background: #fff;
+  padding: 0 6px; /* 添加左右内边距，与time-grid对齐 */
+  margin-bottom: 0;
+  
+  .weekday-cell {
+    padding: 10px 0 6px 0;
+    text-align: center;
+    
+    .weekday-name {
+      font-weight: 700;
+      font-size: 16px;
+      color: #333;
+    }
+  }
+}
+
 .week-header {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列布局 */
   grid-gap: 0 6px; /* 与time-row保持一致的列间距 */
   border-bottom: 1px solid var(--color-border);
   background: #fff;
@@ -1527,18 +1577,12 @@ const handleDeleteCourse = () => {
   padding: 0 6px; /* 添加左右内边距，与time-grid对齐 */
   
   .day-column {
-    padding: 10px 0 6px 0;
+    padding: 6px 0;
     text-align: center;
     border-right: none; /* 移除右边框，改用grid-gap */
     
-    .day-label {
-      font-weight: 600;
-      font-size: 14px;
-    }
-    
     .date-label {
       color: var(--color-text-3);
-      margin-top: 2px;
       font-size: 13px;
     }
   }
@@ -1552,7 +1596,7 @@ const handleDeleteCourse = () => {
   
   .time-row {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列布局 */
     grid-gap: 0 6px; /* 添加列间距 */
     border-bottom: 1px solid var(--color-border);
     min-height: 36px;
@@ -1580,7 +1624,7 @@ const handleDeleteCourse = () => {
 
 .slot-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 改为顶部对齐，以适应内容换行 */
   justify-content: flex-start;
   min-height: 32px;
   height: auto;
@@ -1628,37 +1672,48 @@ const handleDeleteCourse = () => {
     margin-right: 6px;
     background: #bcbcbc;
     flex-shrink: 0;
+    margin-top: 5px; /* 添加顶部边距，使状态条与文本顶部对齐 */
   }
   
   .slot-content {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
+    flex-direction: column; /* 改为纵向排列，时间在上，学生名在下 */
+    align-items: center; /* 居中对齐 */
+    gap: 2px;
     font-size: 14px;
     color: #fff;
     font-weight: 500;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
     min-width: 0;
     max-width: 100%;
+    flex: 1;
+    text-align: center; /* 文本居中 */
   }
   
   .slot-time {
     font-weight: 600;
     font-size: 14px;
     flex-shrink: 0;
+    margin-bottom: 4px; /* 增加与学生姓名之间的间距 */
+    color: rgba(255, 255, 255, 0.9); /* 略微降低不透明度，使其与学生姓名区分 */
   }
   
   .slot-student {
-    margin-left: 4px;
+    margin-left: 0; /* 移除左边距 */
     font-size: 13px;
     font-weight: 500;
     flex-shrink: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 70px;
+    max-width: 140px; /* 增加最大宽度，以便显示更多学生姓名 */
+    white-space: normal; /* 允许文本换行 */
+    word-break: break-word; /* 在单词内部换行 */
+    line-height: 1.2; /* 减小行高，使多行文本更紧凑 */
+    max-height: 3.6em; /* 限制最大高度，约显示3行 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 最多显示3行 */
+    -webkit-box-orient: vertical;
+    text-align: center; /* 文本居中 */
   }
   
   &.available {
@@ -2028,5 +2083,15 @@ const handleDeleteCourse = () => {
       }
     }
   }
+}
+
+.student-item {
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background-color: #f0f2f5;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 13px;
 }
 </style>
