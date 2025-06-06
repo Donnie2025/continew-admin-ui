@@ -20,6 +20,7 @@ export interface StudentResp {
 export interface StudentDetailResp {
   id: string
   name: string
+  /** 性别（male-男 female-女） */
   gender: string
   phone: string
   email: string

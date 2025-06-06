@@ -1,9 +1,9 @@
 <template>
-  <a-tag v-if="props.gender === 1" color="arcoblue" size="small" class="gi_round">
+  <a-tag v-if="props.gender === 'male'" color="arcoblue" size="small" class="gi_round">
     <template #icon><icon-man /></template>
     <template #default>男</template>
   </a-tag>
-  <a-tag v-else-if="props.gender === 2" color="magenta" size="small" class="gi_round">
+  <a-tag v-else-if="props.gender === 'female'" color="magenta" size="small" class="gi_round">
     <template #icon><icon-woman /></template>
     <template #default>女</template>
   </a-tag>
@@ -16,11 +16,11 @@
 defineOptions({ name: 'GiCellGender' })
 
 const props = withDefaults(defineProps<Props>(), {
-  gender: 1,
+  gender: 'male',
 })
 
 interface Props {
-  gender: 1 | 2 | 0
+  gender: 'male' | 'female' | string
 }
 </script>
 
