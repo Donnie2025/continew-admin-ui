@@ -16,9 +16,9 @@
           <div class="file-grid-item" @click.stop="handleClickFile(item)" @dblclick="handleDblclickFile(item)">
             <section class="file-grid-item__wrapper">
               <div class="file-icon">
-                <FileImage :data="item" :title="item.name"></FileImage>
+                <FileImage :data="item" :title="item.originalName"></FileImage>
               </div>
-              <p class="gi_line_1 file-name">{{ getFileName(item) }}</p>
+              <p class="gi_line_1 file-name">{{ item.originalName }}</p>
             </section>
             <!-- 勾选模式 -->
             <section
@@ -31,7 +31,7 @@
             </section>
           </div>
         </a-grid-item>
-        <template #content>
+        <template v-if="has.hasPermOr(['system:file:update', 'system:file:get', 'system:file:download', 'system:file:delete'])" #content>
           <FileRightMenu :data="item" @click="handleRightMenuClick($event, item)"></FileRightMenu>
         </template>
       </a-trigger>
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import FileRightMenu from './FileRightMenu.vue'
 import type { FileItem } from '@/apis/system'
+import has from '@/utils/has'
 
 const props = withDefaults(defineProps<Props>(), {
   data: () => [], // 文件数据
@@ -62,11 +63,6 @@ interface Props {
   data?: FileItem[]
   selectedFileIds?: string[]
   isBatchMode?: boolean
-}
-
-// 文件名称带后缀
-const getFileName = (item: FileItem) => {
-  return `${item.name}${item.extension ? `.${item.extension}` : ''}`
 }
 
 // 点击事件
