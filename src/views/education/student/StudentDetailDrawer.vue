@@ -50,6 +50,7 @@
         size="small"
         :bordered="false"
         class="card-table"
+        row-key="id"
       >
         <a-table-column title="卡名称" data-index="cardName" />
         <a-table-column title="卡类型" data-index="cardType">
@@ -57,7 +58,11 @@
             {{ getCardTypeName(record.cardType) }}
           </template>
         </a-table-column>
-        <a-table-column title="余额" data-index="balance" />
+        <a-table-column title="余额" data-index="balance">
+          <template #cell="{ record }">
+            {{ record.balance }}次
+          </template>
+        </a-table-column>
         <a-table-column title="到期时间" data-index="expireDate" />
         <a-table-column title="激活/停用" data-index="cardStatus">
           <template #cell="{ record }">
@@ -184,9 +189,8 @@ import { useWindowSize } from '@vueuse/core'
 import { ref, computed, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { getStudent } from '@/apis/education/student'
-import { listStuCard, addStuCard, bindStuCard } from '@/apis/education/stuCard'
+import { getAvailableCards, addStuCard, bindStuCard } from '@/apis/education/stuCard'
 import { listTransaction } from '@/apis/education/transaction'
-import { listActiveCards } from '@/apis/education/card'
 import { useDict } from '@/hooks/app'
 
 const { width } = useWindowSize()
@@ -272,7 +276,12 @@ const onBindCard = async () => {
   showBindCardModal.value = true
   // 加载可用会员卡列表
   try {
-    const { data } = await listActiveCards()
+    const stuId = Number(dataId.value)
+    if (!stuId) {
+      bindCardForm.cardList = []
+      return
+    }
+    const { data } = await getAvailableCards(stuId)
     bindCardForm.cardList = data || []
   } catch (error) {
     console.error('获取会员卡列表失败', error)
@@ -409,13 +418,13 @@ const getDataDetail = async () => {
 
 // 查询会员卡列表
 const getCardList = async () => {
-  const { data } = await listStuCard({
-    stuId: dataId.value,
-    sort: ['id,desc'],
-    page: 1,
-    size: 99
-  } as any)
-  cardList.value = (data as any)?.records || []
+  const stuId = Number(dataId.value)
+  if (!stuId) {
+    cardList.value = []
+    return
+  }
+  const { data } = await getAvailableCards(stuId)
+  cardList.value = data || []
 }
 
 // 查询交易记录
@@ -431,23 +440,12 @@ const getTransactionList = async () => {
   transactionList.value = (data as any)?.records || []
 }
 
-// 实际开发中，你可能需要一个API来获取可用卡列表
-const fetchAvailableCards = async () => {
-  try {
-    // const res = await listAvailableCards()
-    // availableCards.value = res.data || []
-  } catch (error) {
-    console.error('获取可用会员卡失败:', error)
-  }
-}
-
 // 打开
 const onOpen = async (id: string) => {
   dataId.value = id
   await getDataDetail()
   await getCardList()
   await getTransactionList()
-  await fetchAvailableCards() // 获取可用会员卡
   visible.value = true
 }
 

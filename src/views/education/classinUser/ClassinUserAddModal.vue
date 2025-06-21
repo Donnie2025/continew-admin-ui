@@ -35,52 +35,28 @@ const formRef = ref<InstanceType<typeof GiForm>>()
 const { user_type } = useDict('user_type')
 
 const [form, resetForm] = useResetReactive({
-  // todo 待补充
+  id: undefined,
+  nickname: '',
+  userType: '',
+  classinUid: '',
+  memberId: undefined,
+  password: '',
+  telephone: '',
+  email: '',
+  classinInstitutionId: undefined,
+  status: 1,
 })
 
 const columns: ColumnItem[] = reactive([
-  {
-    label: '昵称',
-    field: 'nickname',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '成员类型',
-    field: 'userType',
-    type: 'select', 
-    span: 24,
-    required: true,
-    props: {
-      options: user_type,
-    },
-  },
-  {
-    label: '密码',
-    field: 'password',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '手机号',
-    field: 'telephone',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '邮箱',
-    field: 'email',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '关联Classin机构ID',
-    field: 'classinInstitutionId',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
+  { label: '昵称', field: 'nickname', type: 'input', span: 24, required: true },
+  { label: '成员类型', field: 'userType', type: 'select', span: 24, required: true, props: { options: user_type } },
+  { label: 'Classin UID', field: 'classinUid', type: 'input', span: 24 },
+  { label: '关联成员ID', field: 'memberId', type: 'input', span: 24 },
+  { label: '密码', field: 'password', type: 'input', span: 24 },
+  { label: '手机号', field: 'telephone', type: 'input', span: 24 },
+  { label: '邮箱', field: 'email', type: 'input', span: 24 },
+  { label: '关联Classin机构ID', field: 'classinInstitutionId', type: 'input', span: 24, required: true },
+  { label: '状态', field: 'status', type: 'select', span: 24, props: { options: [ { label: '启用', value: 1 }, { label: '禁用', value: 2 } ] } },
 ])
 
 // 重置

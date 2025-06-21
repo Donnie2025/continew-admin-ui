@@ -74,3 +74,8 @@ export function exportStuCard(query: StuCardQuery) {
 export function bindStuCard(data: any) {
   return http.post(`${BASE_URL}/bind`, data)
 }
+
+/** @desc 获取会员可用的会员卡列表 */
+export function getAvailableCards(stuId: string | number) {
+  return http.get<StuCardResp[]>(`${BASE_URL}/available`, { stuId })
+}
