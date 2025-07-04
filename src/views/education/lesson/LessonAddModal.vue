@@ -15,8 +15,10 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
-import { useWindowSize } from '@vueuse/core'
+import { useWindowSize, useDebounceFn } from '@vueuse/core'
 import { getLesson, addLesson, updateLesson } from '@/apis/education/lesson'
+import { listCourse } from '@/apis/education/course'
+import { listActiveTeachers } from '@/apis/education/teacher'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -34,6 +36,88 @@ const title = computed(() => (isUpdate.value ? '修改课堂' : '新增课堂'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 const { yes_no,class_status } = useDict('yes_no','class_status')
 
+// 课程列表
+const courseOptions = ref<{ label: string; value: string | number; courseUid?: string | number }[]>([])
+const courseLoading = ref(false)
+
+// 教师列表
+const teacherOptions = ref<{ label: string; value: string | number }[]>([])
+const teacherLoading = ref(false)
+
+// 获取课程列表
+const fetchCourseOptions = async (keyword = '') => {
+  courseLoading.value = true
+  try {
+    const { data } = await listCourse({
+      name: keyword || undefined,
+      mainTeacherId: undefined,
+      institutionId: undefined,
+      sort: [],
+      page: 1,
+      size: 50
+    })
+    
+    // 检查响应数据结构
+    const records = data.list || []
+    courseOptions.value = records.map(item => {
+      // CourseResp类型中可能没有id字段，这里做一个安全处理
+      const id = (item as any).id || ''
+      return {
+        label: item.name,
+        value: id,
+        courseUid: item.courseUid || ''
+      }
+    })
+  } catch (error) {
+    console.error('获取课程列表失败', error)
+  } finally {
+    courseLoading.value = false
+  }
+}
+
+// 获取教师列表
+const fetchTeacherOptions = async (keyword = '') => {
+  teacherLoading.value = true
+  try {
+    const { data } = await listActiveTeachers(keyword)
+    
+    teacherOptions.value = (data || []).map(item => {
+      return {
+        label: item.name,
+        value: item.id
+      }
+    })
+  } catch (error) {
+    console.error('获取教师列表失败', error)
+  } finally {
+    teacherLoading.value = false
+  }
+}
+
+// 处理课程搜索关键词变化
+const handleCourseSearchChange = useDebounceFn((keyword: string) => {
+  fetchCourseOptions(keyword)
+}, 300)
+
+// 处理教师搜索关键词变化
+const handleTeacherSearchChange = useDebounceFn((keyword: string) => {
+  fetchTeacherOptions(keyword)
+}, 300)
+
+// 课程选择变更时自动填充ClassIn课程ID
+const handleCourseChange = (value: string | number) => {
+  const selectedCourse = courseOptions.value.find(item => item.value === value)
+  if (selectedCourse && selectedCourse.courseUid) {
+    form.courseUid = selectedCourse.courseUid.toString()
+  }
+}
+
+// 教师选择变更时自动填充teacherId
+const handleTeacherChange = (value: string | number) => {
+  // 不需要额外处理，因为teacherId就是选中的值
+  // 如果后端需要额外处理，可以在这里添加逻辑
+}
+
 // 上台人数选项
 const seatNumOptions = Array.from({ length: 12 }, (_, index) => {
   const value = index + 2 // 从2开始，对应1V1
@@ -47,7 +131,7 @@ const [form, resetForm] = useResetReactive({
   courseId: '',
   courseUid: '',
   name: '',
-  teacherUid: '',
+  teacherId: '',
   startTime: null,
   duration: 25,
   seatNum: 2, // 默认1V1，值为2
@@ -58,17 +142,29 @@ const [form, resetForm] = useResetReactive({
 
 const columns: ColumnItem[] = reactive([
   {
-    label: '课程ID',
+    label: '课程',
     field: 'courseId',
-    type: 'input',
+    type: 'select',
     span: 24,
     required: true,
+    props: {
+      allowSearch: true,
+      allowClear: true,
+      loading: courseLoading,
+      options: courseOptions,
+      placeholder: '请输入课程名称搜索',
+      filterOption: false,
+      showSearch: true,
+      defaultActiveFirstOption: false,
+      notFoundContent: courseLoading.value ? '加载中...' : '未找到匹配课程',
+      onSearch: handleCourseSearchChange,
+      onChange: handleCourseChange
+    }
   },
+  // ClassIn课程ID作为隐藏字段，不在表单中显示但会提交到后端
   {
-    label: 'ClassIn 课程ID',
     field: 'courseUid',
-    type: 'input',
-    span: 24,
+    hide: true,  // 隐藏此字段
     required: true,
   },
   {
@@ -79,11 +175,24 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
-    label: '主讲教师UID',
-    field: 'teacherUid',
-    type: 'input',
+    label: '主讲教师',
+    field: 'teacherId',
+    type: 'select',
     span: 24,
     required: true,
+    props: {
+      allowSearch: true,
+      allowClear: true,
+      loading: teacherLoading,
+      options: teacherOptions,
+      placeholder: '请输入教师名称搜索',
+      filterOption: false,
+      showSearch: true,
+      defaultActiveFirstOption: false,
+      notFoundContent: teacherLoading.value ? '加载中...' : '未找到匹配教师',
+      onSearch: handleTeacherSearchChange,
+      onChange: handleTeacherChange
+    }
   },
   {
     label: '活动开始时间',
@@ -137,7 +246,7 @@ const columns: ColumnItem[] = reactive([
   {
     label: '直播状态',
     field: 'liveState',
-    type: 'input',
+    type: 'radio-group',
     span: 24,
     props: {
       options: yes_no,
@@ -146,7 +255,7 @@ const columns: ColumnItem[] = reactive([
   {
     label: '公开状态',
     field: 'openState',
-    type: 'input',
+    type: 'radio-group',
     span: 24,
     props: {
       options: yes_no,
@@ -158,6 +267,9 @@ const columns: ColumnItem[] = reactive([
 const reset = () => {
   formRef.value?.formRef?.resetFields()
   resetForm()
+  // 重置后加载课程列表和教师列表
+  fetchCourseOptions()
+  fetchTeacherOptions()
 }
 
 // 保存
@@ -248,10 +360,30 @@ const onUpdate = async (id: string) => {
   }
   
   Object.assign(form, lessonData)
+  
+  // 如果有课程ID，加载该课程信息到下拉框
+  if (lessonData.courseId) {
+    await fetchCourseOptions()
+  }
+  
+  // 如果有教师ID，加载该教师信息到下拉框
+  if (lessonData.teacherId) {
+    await fetchTeacherOptions()
+  }
+  
   visible.value = true
 }
 
-defineExpose({ onAdd, onUpdate })
+// 初始化时加载课程列表和教师列表
+onMounted(() => {
+  fetchCourseOptions()
+  fetchTeacherOptions()
+})
+
+defineExpose({
+  onAdd,
+  onUpdate
+})
 </script>
 
 <style scoped lang="scss"></style>
