@@ -50,6 +50,16 @@
           <template #icon><icon-download /></template>
           <template #default>导出</template>
         </a-button>
+        <div style="width: 100%; margin-top: 0px;">
+          <a-space size="large">
+            <a-tag color="orangered" size="large" style="font-size: 14px; padding: 8px 16px; font-weight: 500;">
+              总课程数(Total Number): {{ totalCourseCount.toLocaleString('zh-CN') }}
+            </a-tag>
+            <a-tag color="arcoblue" size="large" style="font-size: 14px; padding: 8px 16px; font-weight: 500;">
+              总金额(Total Amount): ₱{{ totalFinalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            </a-tag>
+          </a-space>
+        </div>
       </template>
       <template #isSettled="{ record }">
         <GiCellTag :value="record.isSettled" :dict="yes_no" />
@@ -124,13 +134,77 @@ const queryForm = reactive<SalaryQuery>({
   sort: ['id,desc']
 })
 
+// 总金额和总课程数（所有符合条件的数据）
+const totalFinalAmount = ref(0)
+const totalCourseCount = ref(0)
+
+// 计算所有数据的总金额和总课程数
+const calculateTotalAmount = async () => {
+  try {
+    // 使用最大允许的每页条数获取第一页数据
+    const { data } = await listSalary({ 
+      ...queryForm, 
+      page: 1, 
+      size: 1000 // 使用后端允许的最大值
+    })
+    if (data && data.list) {
+      let totalAmount = 0
+      let totalCount = 0
+      
+      // 统计第一页
+      data.list.forEach((item: any) => {
+        totalAmount += Number(item.finalAmount) || 0
+        totalCount += Number(item.courseCount) || 0
+      })
+      
+      // 如果有更多数据，继续获取
+      const totalRecords = data.total || 0
+      if (totalRecords > 1000) {
+        const totalPages = Math.ceil(totalRecords / 1000)
+        const promises = []
+        for (let page = 2; page <= totalPages; page++) {
+          promises.push(listSalary({ ...queryForm, page, size: 1000 }))
+        }
+        const results = await Promise.all(promises)
+        results.forEach(result => {
+          if (result.data && result.data.list) {
+            result.data.list.forEach((item: any) => {
+              totalAmount += Number(item.finalAmount) || 0
+              totalCount += Number(item.courseCount) || 0
+            })
+          }
+        })
+      }
+      
+      totalFinalAmount.value = totalAmount
+      totalCourseCount.value = totalCount
+    }
+  } catch (error) {
+    console.error('计算总金额失败:', error)
+    totalFinalAmount.value = 0
+    totalCourseCount.value = 0
+  }
+}
+
 const {
   tableData: dataList,
   loading,
   pagination,
-  search,
+  search: originalSearch,
   handleDelete
 } = useTable((page) => listSalary({ ...queryForm, ...page }), { immediate: true })
+
+// 重写 search 方法，在搜索时计算总金额
+const search = async () => {
+  await originalSearch()
+  await calculateTotalAmount()
+}
+
+// 初始化时计算总金额
+onMounted(() => {
+  calculateTotalAmount()
+})
+
 const columns: TableInstance['columns'] = [
   { title: 'Start Date', dataIndex: 'startDate', slotName: 'startDate' },
   { title: 'End Date', dataIndex: 'endDate', slotName: 'endDate' },
