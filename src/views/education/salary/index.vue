@@ -14,18 +14,28 @@
     >
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.teacherName" placeholder="请输入教师姓名" allow-clear @search="search" />
-        <a-date-picker
-          v-model="queryForm.startDate"
-          placeholder="请选择起始日期"
-          format="YYYY-MM-DD"
-          style="height: 32px"
-        />
-        <a-date-picker
-          v-model="queryForm.endDate"
-          placeholder="请选择结束日期"
-          format="YYYY-MM-DD"
-          style="height: 32px"
-        />
+        <a-button-group>
+          <a-button @click="previousWeek">
+            <template #icon><icon-left /></template>
+            <template #default>上一周</template>
+          </a-button>
+          <a-date-picker
+            v-model="queryForm.startDate"
+            placeholder="请选择起始日期"
+            format="YYYY-MM-DD"
+            style="height: 32px"
+          />
+          <a-date-picker
+            v-model="queryForm.endDate"
+            placeholder="请选择结束日期"
+            format="YYYY-MM-DD"
+            style="height: 32px"
+          />
+          <a-button @click="nextWeek">
+            <template #icon><icon-right /></template>
+            <template #default>下一周</template>
+          </a-button>
+        </a-button-group>
 		<a-radio-group v-model="queryForm.isSettled" :options="yes_no" @change="search"/>
 	    <a-input-search v-model="queryForm.groupName" placeholder="请输入所属组" allow-clear @search="search" />
         <a-button @click="reset">
@@ -236,6 +246,26 @@ const reset = () => {
   queryForm.status = '1' // 默认只查询生效的数据
   queryForm.isSettled = undefined
   queryForm.groupName = undefined
+  search()
+}
+
+// 上一周
+const previousWeek = () => {
+  const currentStart = queryForm.startDate ? dayjs(queryForm.startDate) : dayjs()
+  const previousMonday = currentStart.subtract(1, 'week').isoWeekday(1).format('YYYY-MM-DD')
+  const previousSunday = currentStart.subtract(1, 'week').isoWeekday(7).format('YYYY-MM-DD')
+  queryForm.startDate = previousMonday
+  queryForm.endDate = previousSunday
+  search()
+}
+
+// 下一周
+const nextWeek = () => {
+  const currentStart = queryForm.startDate ? dayjs(queryForm.startDate) : dayjs()
+  const nextMonday = currentStart.add(1, 'week').isoWeekday(1).format('YYYY-MM-DD')
+  const nextSunday = currentStart.add(1, 'week').isoWeekday(7).format('YYYY-MM-DD')
+  queryForm.startDate = nextMonday
+  queryForm.endDate = nextSunday
   search()
 }
 
