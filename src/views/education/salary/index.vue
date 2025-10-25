@@ -75,7 +75,7 @@
         </a-button>
         <a-button v-permission="['education:salary:create']" type="outline" status="success" @click="onInitializeWeeklySalary">
           <template #icon><icon-calendar /></template>
-          <template #default>生成本周工资流水</template>
+          <template #default>生成工资流水</template>
         </a-button>
         <a-button v-permission="['education:salary:export']" @click="onExport">
           <template #icon><icon-download /></template>
@@ -373,16 +373,23 @@ const onToggleStatus = (record: SalaryResp) => {
   })
 }
 
-// 生成本周工资流水
+// 生成工资流水
 const onInitializeWeeklySalary = () => {
+  const startDate = queryForm.startDate
+  const endDate = queryForm.endDate
+  const dateRange = startDate && endDate ? `${startDate} ~ ${endDate}` : '本周'
+  
   Modal.confirm({
     title: '确认操作',
-    content: '确定要为所有符合条件的老师生成本周的工资流水吗？',
+    content: `确定要为所有符合条件的老师生成${dateRange}的工资流水吗？`,
     onOk: async () => {
       try {
         loading.value = true
-        const { data, message } = await initializeWeeklySalaryData()
-        Message.success(message || `成功生成 ${data} 条薪资记录`)
+        const { data } = await initializeWeeklySalaryData({
+          startDate: queryForm.startDate,
+          endDate: queryForm.endDate
+        })
+        Message.success(`成功生成 ${data} 条薪资记录`)
         search() // 刷新表格数据
       } catch (error) {
         console.error('生成工资流水失败:', error)

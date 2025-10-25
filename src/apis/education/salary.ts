@@ -93,8 +93,8 @@ export function updateSalaryStatus(id: string, status: string) {
 }
 
 /** @desc 生成本周工资流水 */
-export function initializeWeeklySalaryData() {
-  return http.post<number>(`${BASE_URL}/initialize-weekly`)
+export function initializeWeeklySalaryData(data?: { startDate?: string; endDate?: string }) {
+  return http.post<number>(`${BASE_URL}/initialize-weekly`, data)
 }
 
 /** 批量导入请求参数 */
