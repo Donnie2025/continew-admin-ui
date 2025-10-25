@@ -38,6 +38,14 @@
           <template #icon><icon-plus /></template>
           <template #default>新增</template>
         </a-button>
+        <a-button v-permission="['education:salary:create']" type="outline" status="success" @click="onBatchImport">
+          <template #icon><icon-import /></template>
+          <template #default>批量导入</template>
+        </a-button>
+        <a-button v-permission="['education:salary:create']" type="outline" status="success" @click="onInitializeWeeklySalary">
+          <template #icon><icon-calendar /></template>
+          <template #default>生成本周工资流水</template>
+        </a-button>
         <a-button v-permission="['education:salary:export']" @click="onExport">
           <template #icon><icon-download /></template>
           <template #default>导出</template>
@@ -73,6 +81,7 @@
 
     <SalaryAddModal ref="SalaryAddModalRef" @save-success="search" />
     <SalaryDetailDrawer ref="SalaryDetailDrawerRef" />
+    <SalaryBatchImportModal ref="SalaryBatchImportModalRef" @import-success="search" />
   </div>
 </template>
 
@@ -81,20 +90,34 @@ import type { TableInstance } from '@arco-design/web-vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import SalaryAddModal from './SalaryAddModal.vue'
 import SalaryDetailDrawer from './SalaryDetailDrawer.vue'
-import { type SalaryResp, type SalaryQuery, deleteSalary, exportSalary, listSalary, updateSalaryStatus, getSalary, updateSalary } from '@/apis/education/salary'
+import SalaryBatchImportModal from './SalaryBatchImportModal.vue'
+import { type SalaryResp, type SalaryQuery, deleteSalary, exportSalary, listSalary, updateSalaryStatus, getSalary, updateSalary, initializeWeeklySalaryData } from '@/apis/education/salary'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
+import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
+
+dayjs.extend(isoWeek)
 
 defineOptions({ name: 'Salary' })
 
 const { yes_no } = useDict('yes_no')
 
+// 获取本周一和周日
+const getThisWeekRange = () => {
+  const monday = dayjs().isoWeekday(1).format('YYYY-MM-DD')
+  const sunday = dayjs().isoWeekday(7).format('YYYY-MM-DD')
+  return { monday, sunday }
+}
+
+const { monday: defaultStartDate, sunday: defaultEndDate } = getThisWeekRange()
+
 const queryForm = reactive<SalaryQuery>({
   teacherName: undefined,
-  startDate: undefined,
-  endDate: undefined,
+  startDate: defaultStartDate,
+  endDate: defaultEndDate,
   status: undefined,
   groupName: undefined,
   sort: ['id,desc']
@@ -131,9 +154,10 @@ const columns: TableInstance['columns'] = [
 
 // 重置
 const reset = () => {
+  const { monday, sunday } = getThisWeekRange()
   queryForm.teacherName = undefined
-  queryForm.startDate = undefined
-  queryForm.endDate = undefined
+  queryForm.startDate = monday
+  queryForm.endDate = sunday
   queryForm.status = undefined
   queryForm.groupName = undefined
   search()
@@ -199,6 +223,33 @@ const onToggleStatus = (record: SalaryResp) => {
       }
     }
   })
+}
+
+// 生成本周工资流水
+const onInitializeWeeklySalary = () => {
+  Modal.confirm({
+    title: '确认操作',
+    content: '确定要为所有符合条件的老师生成本周的工资流水吗？',
+    onOk: async () => {
+      try {
+        loading.value = true
+        const { data, message } = await initializeWeeklySalaryData()
+        Message.success(message || `成功生成 ${data} 条薪资记录`)
+        search() // 刷新表格数据
+      } catch (error) {
+        console.error('生成工资流水失败:', error)
+        Message.error('生成工资流水失败')
+      } finally {
+        loading.value = false
+      }
+    }
+  })
+}
+
+const SalaryBatchImportModalRef = ref<InstanceType<typeof SalaryBatchImportModal>>()
+// 批量导入
+const onBatchImport = () => {
+  SalaryBatchImportModalRef.value?.onOpen()
 }
 </script>
 

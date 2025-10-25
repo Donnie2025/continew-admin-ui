@@ -88,3 +88,34 @@ export function exportSalary(query: SalaryQuery) {
 export function updateSalaryStatus(id: string, status: string) {
   return http.put(`${BASE_URL}/${id}`, { status })
 }
+
+/** @desc 生成本周工资流水 */
+export function initializeWeeklySalaryData() {
+  return http.post<number>(`${BASE_URL}/initialize-weekly`)
+}
+
+/** 批量导入请求参数 */
+export interface SalaryBatchImportReq {
+  importData: string
+  startDate?: string
+  endDate?: string
+}
+
+/** 导入失败详情 */
+export interface ImportFailureDetail {
+  teacherName: string
+  courseCount?: number
+  reason: string
+}
+
+/** 批量导入响应 */
+export interface SalaryBatchImportResp {
+  successCount: number
+  failureCount: number
+  failures: ImportFailureDetail[]
+}
+
+/** @desc 批量导入教师课程数量 */
+export function batchImportSalary(data: SalaryBatchImportReq) {
+  return http.post<SalaryBatchImportResp>(`${BASE_URL}/batch-import`, data)
+}
