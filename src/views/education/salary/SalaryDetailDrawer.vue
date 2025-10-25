@@ -11,7 +11,8 @@
       <a-descriptions-item label="扣款金额">{{ dataDetail?.deductionAmount }}</a-descriptions-item>
       <a-descriptions-item label="小费金额">{{ dataDetail?.tipAmount }}</a-descriptions-item>
       <a-descriptions-item label="最终支付金额">{{ dataDetail?.finalAmount }}</a-descriptions-item>
-      <a-descriptions-item label="状态（0：未结算；1：已结算）">{{ dataDetail?.status }}</a-descriptions-item>
+      <a-descriptions-item label="状态（0：失效；1：生效）">{{ dataDetail?.status }}</a-descriptions-item>
+      <a-descriptions-item label="是否结算（0：未结算；1：已结算）">{{ dataDetail?.isSettled }}</a-descriptions-item>
       <a-descriptions-item label="单价">{{ dataDetail?.rate }}</a-descriptions-item>
       <a-descriptions-item label="所属组">{{ dataDetail?.groupName }}</a-descriptions-item>
       <a-descriptions-item label="备注">{{ dataDetail?.remark }}</a-descriptions-item>

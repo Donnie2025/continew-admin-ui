@@ -14,6 +14,7 @@ export interface SalaryResp {
   tipAmount: string
   finalAmount: string
   status: string
+  isSettled: string
   rate: string
   groupName: string
   remark: string
@@ -34,6 +35,7 @@ export interface SalaryDetailResp {
   tipAmount: string
   finalAmount: string
   status: string
+  isSettled: string
   rate: string
   groupName: string
   remark: string
@@ -49,6 +51,7 @@ export interface SalaryQuery {
   startDate: string | undefined
   endDate: string | undefined
   status: string | undefined
+  isSettled: string | undefined
   groupName: string | undefined
   sort: Array<string>
 }

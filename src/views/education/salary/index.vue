@@ -26,7 +26,7 @@
           format="YYYY-MM-DD"
           style="height: 32px"
         />
-		<a-radio-group v-model="queryForm.status" :options="yes_no" @change="search"/>
+		<a-radio-group v-model="queryForm.isSettled" :options="yes_no" @change="search"/>
 	    <a-input-search v-model="queryForm.groupName" placeholder="请输入所属组" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
@@ -51,15 +51,15 @@
           <template #default>导出</template>
         </a-button>
       </template>
-      <template #status="{ record }">
-        <GiCellTag :value="record.status" :dict="yes_no" />
+      <template #isSettled="{ record }">
+        <GiCellTag :value="record.isSettled" :dict="yes_no" />
       </template>
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:salary:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link v-permission="['education:salary:update']" title="修改" @click="onUpdate(record)">修改</a-link>
           <a-link 
-            v-if="String(record.status).trim() === '0'"
+            v-if="String(record.isSettled).trim() === '0'"
             v-permission="['education:salary:update']" 
             title="标记为已结算"
             @click="onToggleStatus(record)"
@@ -118,7 +118,8 @@ const queryForm = reactive<SalaryQuery>({
   teacherName: undefined,
   startDate: defaultStartDate,
   endDate: defaultEndDate,
-  status: undefined,
+  status: '1', // 默认只查询生效的数据
+  isSettled: undefined,
   groupName: undefined,
   sort: ['id,desc']
 })
@@ -139,7 +140,7 @@ const columns: TableInstance['columns'] = [
   { title: 'Deduction', dataIndex: 'deductionAmount', slotName: 'deductionAmount' },
   { title: 'Tip', dataIndex: 'tipAmount', slotName: 'tipAmount' },
   { title: 'Final Amount', dataIndex: 'finalAmount', slotName: 'finalAmount' },
-  { title: 'Is Paid', dataIndex: 'status', slotName: 'status' },
+  { title: 'Is Settled', dataIndex: 'isSettled', slotName: 'isSettled' },
   { title: 'Rate', dataIndex: 'rate', slotName: 'rate' },
   {
     title: 'Action',
@@ -158,7 +159,8 @@ const reset = () => {
   queryForm.teacherName = undefined
   queryForm.startDate = monday
   queryForm.endDate = sunday
-  queryForm.status = undefined
+  queryForm.status = '1' // 默认只查询生效的数据
+  queryForm.isSettled = undefined
   queryForm.groupName = undefined
   search()
 }
@@ -195,7 +197,7 @@ const onDetail = (record: SalaryResp) => {
 
 // 更改状态
 const onToggleStatus = (record: SalaryResp) => {
-  if (String(record.status).trim() !== '0') {
+  if (String(record.isSettled).trim() !== '0') {
     Message.warning('已结算的记录不能更改状态')
     return
   }
@@ -207,11 +209,22 @@ const onToggleStatus = (record: SalaryResp) => {
       try {
         loading.value = true
         // 先获取详细信息
-        const salaryDetail = await getSalary(record.id)
-        // 只更改状态字段
+        const { data: salaryDetail } = await getSalary(record.id)
+        // 只更改结算状态字段
         await updateSalary({ 
-          ...salaryDetail,
-          status: '1'
+          teacherId: Number(salaryDetail.teacherId),
+          teacherName: salaryDetail.teacherName,
+          startDate: salaryDetail.startDate,
+          endDate: salaryDetail.endDate,
+          courseCount: Number(salaryDetail.courseCount),
+          courseAmount: salaryDetail.courseAmount,
+          deductionAmount: salaryDetail.deductionAmount,
+          tipAmount: salaryDetail.tipAmount,
+          status: Number(salaryDetail.status),
+          isSettled: 1,
+          rate: Number(salaryDetail.rate),
+          groupName: salaryDetail.groupName,
+          remark: salaryDetail.remark
         }, record.id)
         Message.success('状态已更改为已结算')
         search() // 刷新表格数据
