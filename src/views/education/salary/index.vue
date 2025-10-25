@@ -36,8 +36,29 @@
             <template #default>下一周</template>
           </a-button>
         </a-button-group>
-		<a-radio-group v-model="queryForm.isSettled" :options="yes_no" @change="search"/>
-	    <a-input-search v-model="queryForm.groupName" placeholder="请输入所属组" allow-clear @search="search" />
+        <a-select 
+          v-model="queryForm.isSettled" 
+          placeholder="是否结算" 
+          style="width: 150px"
+          @change="search"
+        >
+          <a-option value="">全部</a-option>
+          <a-option :value="1">已结算</a-option>
+          <a-option :value="0">未结算</a-option>
+        </a-select>
+        <a-select 
+          v-model="queryForm.groupName" 
+          placeholder="请选择所属组" 
+          allow-clear
+          style="width: 150px"
+          @change="search"
+        >
+          <a-option value="Rona">Rona</a-option>
+          <a-option value="Mae">Mae</a-option>
+          <a-option value="Lina">Lina</a-option>
+          <a-option value="Ainie">Ainie</a-option>
+          <a-option value="Mira">Mira</a-option>
+        </a-select>
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -139,10 +160,19 @@ const queryForm = reactive<SalaryQuery>({
   startDate: defaultStartDate,
   endDate: defaultEndDate,
   status: '1', // 默认只查询生效的数据
-  isSettled: undefined,
+  isSettled: '' as any, // 默认为空字符串，表示"全部"
   groupName: undefined,
   sort: ['id,desc']
 })
+
+// 清理查询参数，将空字符串转换为 undefined
+const cleanQueryParams = (params: any) => {
+  const cleaned = { ...params }
+  if (cleaned.isSettled === '') {
+    cleaned.isSettled = undefined
+  }
+  return cleaned
+}
 
 // 总金额和总课程数（所有符合条件的数据）
 const totalFinalAmount = ref(0)
@@ -152,8 +182,9 @@ const totalCourseCount = ref(0)
 const calculateTotalAmount = async () => {
   try {
     // 使用最大允许的每页条数获取第一页数据
+    const cleanedParams = cleanQueryParams(queryForm)
     const { data } = await listSalary({ 
-      ...queryForm, 
+      ...cleanedParams, 
       page: 1, 
       size: 1000 // 使用后端允许的最大值
     })
@@ -173,7 +204,7 @@ const calculateTotalAmount = async () => {
         const totalPages = Math.ceil(totalRecords / 1000)
         const promises = []
         for (let page = 2; page <= totalPages; page++) {
-          promises.push(listSalary({ ...queryForm, page, size: 1000 }))
+          promises.push(listSalary({ ...cleanedParams, page, size: 1000 }))
         }
         const results = await Promise.all(promises)
         results.forEach(result => {
@@ -202,7 +233,7 @@ const {
   pagination,
   search: originalSearch,
   handleDelete
-} = useTable((page) => listSalary({ ...queryForm, ...page }), { immediate: true })
+} = useTable((page) => listSalary({ ...cleanQueryParams(queryForm), ...page }), { immediate: true })
 
 // 重写 search 方法，在搜索时计算总金额
 const search = async () => {
@@ -244,7 +275,7 @@ const reset = () => {
   queryForm.startDate = monday
   queryForm.endDate = sunday
   queryForm.status = '1' // 默认只查询生效的数据
-  queryForm.isSettled = undefined
+  queryForm.isSettled = '' as any // 重置为"全部"
   queryForm.groupName = undefined
   search()
 }
