@@ -3,6 +3,7 @@ import http from '@/utils/http'
 const BASE_URL = '/education/student'
 
 export interface StudentResp {
+  id: string
   name: string
   phone: string
   email: string
@@ -73,4 +74,23 @@ export function deleteStudent(id: string) {
 /** @desc 导出学生管理 */
 export function exportStudent(query: StudentQuery) {
   return http.download(`${BASE_URL}/export`, query)
+}
+
+export interface StudentBatchImportReq {
+  importData: string
+}
+
+export interface StudentBatchImportResp {
+  successCount: number
+  failureCount: number
+  failures: Array<{
+    studentName: string
+    phone: string
+    reason: string
+  }>
+}
+
+/** @desc 批量导入学生 */
+export function batchImportStudent(data: StudentBatchImportReq) {
+  return http.post<StudentBatchImportResp>(`${BASE_URL}/batch-import`, data)
 }

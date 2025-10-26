@@ -25,6 +25,10 @@
           <template #icon><icon-plus /></template>
           <template #default>新增</template>
         </a-button>
+        <a-button v-permission="['education:student:create']" @click="onBatchImport">
+          <template #icon><icon-upload /></template>
+          <template #default>批量导入</template>
+        </a-button>
         <a-button v-permission="['education:student:export']" @click="onExport">
           <template #icon><icon-download /></template>
           <template #default>导出</template>
@@ -65,6 +69,7 @@
 
     <StudentAddModal ref="StudentAddModalRef" @save-success="search" />
     <StudentDetailDrawer ref="StudentDetailDrawerRef" />
+    <StudentBatchImportModal ref="StudentBatchImportModalRef" @import-success="search" />
   </div>
 </template>
 
@@ -72,6 +77,7 @@
 import type { TableInstance } from '@arco-design/web-vue'
 import StudentAddModal from './StudentAddModal.vue'
 import StudentDetailDrawer from './StudentDetailDrawer.vue'
+import StudentBatchImportModal from './StudentBatchImportModal.vue'
 import { type StudentResp, type StudentQuery, deleteStudent, exportStudent, listStudent } from '@/apis/education/student'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -150,6 +156,12 @@ const StudentDetailDrawerRef = ref<InstanceType<typeof StudentDetailDrawer>>()
 // 详情
 const onDetail = (record: StudentResp) => {
   StudentDetailDrawerRef.value?.onOpen(record.id)
+}
+
+const StudentBatchImportModalRef = ref<InstanceType<typeof StudentBatchImportModal>>()
+// 批量导入
+const onBatchImport = () => {
+  StudentBatchImportModalRef.value?.onOpen()
 }
 </script>
 
