@@ -19,6 +19,12 @@
           <span class="info-label">Period:</span>
           <span class="info-value">{{ dataDetail?.startDate }} ~ {{ dataDetail?.endDate }}</span>
         </div>
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value" :class="{ 'settled': String(dataDetail?.isSettled) === '1', 'unsettled': String(dataDetail?.isSettled) === '0' }">
+            {{ String(dataDetail?.isSettled) === '1' ? 'Settled' : 'Unsettled' }}
+          </span>
+        </div>
       </div>
 
       <!-- Salary Breakdown -->
@@ -66,20 +72,38 @@
       <!-- Footer Note -->
       <div class="statement-footer">
         <p class="footer-note">This is an official salary statement. Please keep it for your records.</p>
+        
+        <!-- Settle Button -->
+        <div v-if="String(dataDetail?.isSettled) === '0'" class="settle-button-container">
+          <a-button type="primary" size="large" :loading="settling" @click="handleSettle">
+            <template #icon><icon-check /></template>
+            Mark as Settled
+          </a-button>
+        </div>
+        <div v-else class="settled-badge">
+          <icon-check-circle-fill />
+          <span>Already Settled</span>
+        </div>
       </div>
     </div>
   </a-drawer>
 </template>
 
 <script setup lang="ts">
+import { Message, Modal } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
-import { type SalaryDetailResp, getSalary as getDetail } from '@/apis/education/salary'
+import { type SalaryDetailResp, getSalary as getDetail, updateSalary } from '@/apis/education/salary'
+
+const emit = defineEmits<{
+  (e: 'settle-success'): void
+}>()
 
 const { width } = useWindowSize()
 
 const dataId = ref('')
 const dataDetail = ref<SalaryDetailResp>()
 const visible = ref(false)
+const settling = ref(false)
 
 // 格式化金额
 const formatAmount = (amount: number | undefined) => {
@@ -101,6 +125,51 @@ const onOpen = async (id: string) => {
   dataId.value = id
   await getDataDetail()
   visible.value = true
+}
+
+// 处理结算
+const handleSettle = () => {
+  if (!dataDetail.value) return
+  
+  Modal.confirm({
+    title: 'Confirm Settlement',
+    content: 'Are you sure you want to mark this salary record as settled? This action cannot be undone.',
+    onOk: async () => {
+      try {
+        settling.value = true
+        
+        // 更新结算状态
+        await updateSalary({ 
+          teacherId: Number(dataDetail.value.teacherId),
+          teacherName: dataDetail.value.teacherName,
+          startDate: dataDetail.value.startDate,
+          endDate: dataDetail.value.endDate,
+          courseCount: Number(dataDetail.value.courseCount),
+          courseAmount: dataDetail.value.courseAmount,
+          deductionAmount: dataDetail.value.deductionAmount,
+          tipAmount: dataDetail.value.tipAmount,
+          status: Number(dataDetail.value.status),
+          isSettled: 1, // 设置为已结算
+          rate: Number(dataDetail.value.rate),
+          groupName: dataDetail.value.groupName,
+          remark: dataDetail.value.remark
+        }, dataId.value)
+        
+        Message.success('Salary record has been marked as settled')
+        
+        // 刷新详情
+        await getDataDetail()
+        
+        // 触发父组件刷新列表
+        emit('settle-success')
+      } catch (error) {
+        console.error('Failed to settle:', error)
+        Message.error('Failed to settle salary record')
+      } finally {
+        settling.value = false
+      }
+    }
+  })
 }
 
 defineExpose({ onOpen })
@@ -179,6 +248,16 @@ defineExpose({ onOpen })
       &.teacher-name {
         color: #667eea;
         font-size: 16px;
+      }
+      
+      &.settled {
+        color: #00b42a;
+        font-weight: 700;
+      }
+
+      &.unsettled {
+        color: #ff7d00;
+        font-weight: 700;
       }
     }
   }
@@ -283,9 +362,41 @@ defineExpose({ onOpen })
   .footer-note {
     font-size: 12px;
     color: #999;
-    margin: 0;
+    margin: 0 0 16px 0;
     font-style: italic;
     line-height: 1.6;
+  }
+  
+  .settle-button-container {
+    margin-top: 16px;
+    
+    .arco-btn {
+      min-width: 200px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+      }
+    }
+  }
+  
+  .settled-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #00b42a 0%, #00d962 100%);
+    color: white;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 180, 42, 0.3);
+    
+    .arco-icon {
+      font-size: 20px;
+    }
   }
 }
 

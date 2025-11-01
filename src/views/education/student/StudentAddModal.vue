@@ -186,6 +186,13 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
+    label: '手机号码',
+    field: 'phone',
+    type: 'input',
+    span: 24,
+    required: true,
+  },
+  {
     label: '性别',
     field: 'gender',
     type: 'select',
@@ -193,13 +200,6 @@ const columns: ColumnItem[] = reactive([
     props: {
       options: sex_type,
     },
-  },
-  {
-    label: '手机号码',
-    field: 'phone',
-    type: 'input',
-    span: 24,
-    required: true,
   },
   {
     label: '邮箱',

@@ -121,7 +121,7 @@
     </GiTable>
 
     <SalaryAddModal ref="SalaryAddModalRef" @save-success="search" />
-    <SalaryDetailDrawer ref="SalaryDetailDrawerRef" />
+    <SalaryDetailDrawer ref="SalaryDetailDrawerRef" @settle-success="search" />
     <SalaryBatchImportModal ref="SalaryBatchImportModalRef" @import-success="search" />
   </div>
 </template>
