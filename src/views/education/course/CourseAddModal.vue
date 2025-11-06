@@ -17,6 +17,7 @@
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getCourse, addCourse, updateCourse } from '@/apis/education/course'
+import { listActiveInstitutions, type InstitutionResp } from '@/apis/education/institution'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -32,6 +33,10 @@ const visible = ref(false)
 const isUpdate = computed(() => !!dataId.value)
 const title = computed(() => (isUpdate.value ? '修改班级' : '新增班级'))
 const formRef = ref<InstanceType<typeof GiForm>>()
+
+// 机构列表
+const institutionOptions = ref<{ label: string; value: string | number }[]>([])
+const institutionLoading = ref(false)
 
 const [form, resetForm] = useResetReactive({
   // todo 待补充
@@ -60,14 +65,47 @@ const columns: ColumnItem[] = reactive([
     field: 'courseSettingId',
     type: 'input',
     span: 24,
+    componentProps: {
+      placeholder: '请输入教室设置ID',
+    },
   },
   {
-    label: '所属机构ID',
+    label: '所属机构',
     field: 'institutionId',
-    type: 'input',
+    type: 'select',
     span: 24,
+    props: {
+      allowClear: true,
+      loading: institutionLoading,
+      options: institutionOptions,
+      placeholder: '请选择所属机构'
+    }
   },
 ])
+
+// 加载机构列表
+const fetchInstitutionOptions = async (setDefault = false) => {
+  institutionLoading.value = true
+  try {
+    const { data } = await listActiveInstitutions()
+    institutionOptions.value = (data || []).map((item: InstitutionResp) => ({
+      label: item.name,
+      value: item.id
+    }))
+    
+    // 如果是新增，设置默认值为"元气森林"
+    if (setDefault && data && data.length > 0) {
+      const yuanqisenlin = data.find((item: InstitutionResp) => item.name === '元气森林')
+      if (yuanqisenlin) {
+        form.institutionId = yuanqisenlin.id
+      }
+    }
+  } catch (error) {
+    console.error('获取机构列表失败', error)
+  } finally {
+    institutionLoading.value = false
+  }
+}
 
 // 重置
 const reset = () => {
@@ -98,6 +136,9 @@ const save = async () => {
 const onAdd = async () => {
   reset()
   dataId.value = ''
+  // 设置默认值
+  form.courseSettingId = '1'
+  await fetchInstitutionOptions(true) // 传递true表示设置默认值
   visible.value = true
 }
 
@@ -105,6 +146,7 @@ const onAdd = async () => {
 const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
+  await fetchInstitutionOptions(false) // 编辑时不设置默认值
   const { data } = await getCourse(id)
   Object.assign(form, data)
   visible.value = true

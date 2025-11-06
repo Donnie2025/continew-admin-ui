@@ -10,11 +10,14 @@ export interface LessonResp {
   classUid: string
   unitUid: string
   name: string
+  teacherId: string
   teacherUid: string
+  teacherName: string
   startTime: string
   endTime: string
-  seatNum: string
-  recordState: string
+  duration: number | string
+  seatNum: number | string
+  recordState: number | string
   liveState: string
   openState: string
   status: string
@@ -31,11 +34,14 @@ export interface LessonDetailResp {
   classUid: string
   unitUid: string
   name: string
+  teacherId: string
   teacherUid: string
+  teacherName: string
   startTime: string
   endTime: string
-  seatNum: string
-  recordState: string
+  duration: number | string
+  seatNum: number | string
+  recordState: number | string
   liveState: string
   openState: string
   uniqueIdentity: string
@@ -91,4 +97,9 @@ export function deleteLesson(id: string) {
 /** @desc 导出课堂 */
 export function exportLesson(query: LessonQuery) {
   return http.download(`${BASE_URL}/export`, query)
+}
+
+/** @desc 获取班级的课节列表 */
+export function listCourseLessons(courseId: string) {
+  return http.get<LessonResp[]>(`/education/course/lesson/${courseId}`)
 }

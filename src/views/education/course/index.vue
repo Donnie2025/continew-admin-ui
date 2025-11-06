@@ -31,10 +31,17 @@
           <template #default>导出</template>
         </a-button>
       </template>
+      <template #mainTeacherName="{ record }">
+        <span v-if="record.mainTeacherName">{{ record.mainTeacherName }}</span>
+        <span v-else style="color: #999">未设置</span>
+      </template>
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:course:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link v-permission="['education:course:update']" title="修改" @click="onUpdate(record)">修改</a-link>
+          <a-link title="关联老师" @click="onManageTeachers(record)">关联老师</a-link>
+          <a-link title="关联学生" @click="onManageStudents(record)">关联学生</a-link>
+          <a-link title="管理课节" @click="onManageLessons(record)">管理课节</a-link>
           <a-link
             v-permission="['education:course:delete']"
             status="danger"
@@ -50,6 +57,9 @@
 
     <CourseAddModal ref="CourseAddModalRef" @save-success="search" />
     <CourseDetailDrawer ref="CourseDetailDrawerRef" />
+    <CourseTeacherModal ref="CourseTeacherModalRef" @save-success="search" />
+    <CourseStudentModal ref="CourseStudentModalRef" @save-success="search" />
+    <CourseLessonModal ref="CourseLessonModalRef" @save-success="search" />
   </div>
 </template>
 
@@ -57,6 +67,9 @@
 import type { TableInstance } from '@arco-design/web-vue'
 import CourseAddModal from './CourseAddModal.vue'
 import CourseDetailDrawer from './CourseDetailDrawer.vue'
+import CourseTeacherModal from './CourseTeacherModal.vue'
+import CourseStudentModal from './CourseStudentModal.vue'
+import CourseLessonModal from './CourseLessonModal.vue'
 import { type CourseResp, type CourseQuery, deleteCourse, exportCourse, listCourse } from '@/apis/education/course'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -81,18 +94,15 @@ const {
   handleDelete
 } = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
-  { title: '教室名称', dataIndex: 'name', slotName: 'name' },
-  { title: '班主任ID', dataIndex: 'mainTeacherId', slotName: 'mainTeacherId' },
-  { title: 'Classin班主任ID', dataIndex: 'mainTeacherUid', slotName: 'mainTeacherUid' },
-  { title: 'classin教室ID', dataIndex: 'courseUid', slotName: 'courseUid' },
-  { title: '教室设置ID', dataIndex: 'courseSettingId', slotName: 'courseSettingId' },
-  { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId' },
-  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime' },
+  { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
+  { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 120 },
+  { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId', width: 120 },
+  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime', width: 180 },
   {
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 160,
+    width: 400,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
     show: has.hasPermOr(['education:course:get', 'education:course:update', 'education:course:delete'])
@@ -135,6 +145,24 @@ const CourseDetailDrawerRef = ref<InstanceType<typeof CourseDetailDrawer>>()
 // 详情
 const onDetail = (record: CourseResp) => {
   CourseDetailDrawerRef.value?.onOpen(record.id)
+}
+
+const CourseTeacherModalRef = ref<InstanceType<typeof CourseTeacherModal>>()
+// 管理老师
+const onManageTeachers = (record: CourseResp) => {
+  CourseTeacherModalRef.value?.onOpen(record.id, record.name)
+}
+
+const CourseStudentModalRef = ref<InstanceType<typeof CourseStudentModal>>()
+// 管理学生
+const onManageStudents = (record: CourseResp) => {
+  CourseStudentModalRef.value?.onOpen(record.id, record.name)
+}
+
+const CourseLessonModalRef = ref<InstanceType<typeof CourseLessonModal>>()
+// 管理课节
+const onManageLessons = (record: CourseResp) => {
+  CourseLessonModalRef.value?.onOpen(record.id, record.name)
 }
 </script>
 

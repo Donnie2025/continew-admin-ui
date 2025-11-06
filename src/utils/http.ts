@@ -31,7 +31,7 @@ const StatusCodeMessage: ICodeMessage = {
 
 const http: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_PREFIX ?? import.meta.env.VITE_API_BASE_URL,
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
 })
 
 const handleError = (msg: string) => {
