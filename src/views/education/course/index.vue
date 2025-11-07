@@ -96,7 +96,7 @@ const {
 const columns: TableInstance['columns'] = [
   { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
   { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 120 },
-  { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId', width: 120 },
+  { title: '所属机构', dataIndex: 'institutionName', slotName: 'institutionName', width: 150 },
   { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime', width: 180 },
   {
     title: '操作',

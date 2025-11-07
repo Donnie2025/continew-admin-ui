@@ -11,6 +11,7 @@ export interface CourseResp {
   courseUid: string
   courseSettingId: string
   institutionId: string
+  institutionName?: string
   createTime: string
   createUserString: string
   updateUserString: string
