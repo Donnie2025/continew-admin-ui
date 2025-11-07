@@ -9,7 +9,21 @@
     @before-ok="save"
     @close="reset"
   >
-    <GiForm ref="formRef" v-model="form" :columns="columns" />
+    <GiForm ref="formRef" v-model="form" :columns="columns">
+      <template #mainTeacherId>
+        <a-auto-complete
+          v-model="teacherName"
+          :data="teacherOptions"
+          :loading="teacherLoading"
+          :filter-option="false"
+          placeholder="请输入教师姓名或手机号搜索"
+          allow-clear
+          @search="handleSearchTeacher"
+          @select="handleSelectTeacher"
+          @clear="handleClearTeacher"
+        />
+      </template>
+    </GiForm>
   </a-modal>
 </template>
 
@@ -18,6 +32,7 @@ import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getCourse, addCourse, updateCourse } from '@/apis/education/course'
 import { listActiveInstitutions, type InstitutionResp } from '@/apis/education/institution'
+import { searchTeachers, getTeacher, type TeacherResp } from '@/apis/education/teacher'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -38,9 +53,53 @@ const formRef = ref<InstanceType<typeof GiForm>>()
 const institutionOptions = ref<{ label: string; value: string | number }[]>([])
 const institutionLoading = ref(false)
 
+// 教师搜索
+const teacherOptions = ref<{ label: string; value: string; id: number | string }[]>([])
+const teacherLoading = ref(false)
+const teacherName = ref('')
+
 const [form, resetForm] = useResetReactive({
   // todo 待补充
 })
+
+// 搜索教师
+const handleSearchTeacher = async (keyword: string) => {
+  if (!keyword || keyword.trim().length < 2) {
+    teacherOptions.value = []
+    return
+  }
+  
+  teacherLoading.value = true
+  try {
+    const { data } = await searchTeachers(keyword.trim())
+    teacherOptions.value = (data || []).map((item: TeacherResp) => ({
+      label: `${item.name} (${item.phone})`,
+      value: item.name, // 显示教师名字
+      id: item.id // 存储教师ID
+    }))
+  } catch (error) {
+    console.error('搜索教师失败', error)
+    teacherOptions.value = []
+  } finally {
+    teacherLoading.value = false
+  }
+}
+
+// 选择教师
+const handleSelectTeacher = (value: string) => {
+  const selectedTeacher = teacherOptions.value.find(item => item.value === value)
+  if (selectedTeacher) {
+    teacherName.value = selectedTeacher.value // 显示名字
+    form.mainTeacherId = selectedTeacher.id // 表单存储ID
+  }
+}
+
+// 清除教师
+const handleClearTeacher = () => {
+  teacherName.value = ''
+  form.mainTeacherId = undefined
+  teacherOptions.value = []
+}
 
 const columns: ColumnItem[] = reactive([
   {
@@ -51,21 +110,16 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
-    label: '班主任手机号',
-    field: 'mainTeacherPhone',
-    type: 'input',
+    label: '班主任',
+    field: 'mainTeacherId',
     span: 24,
-    componentProps: {
-      placeholder: '请输入班主任手机号',
-      allowClear: true,
-    },
   },
   {
     label: '教室设置ID',
     field: 'courseSettingId',
     type: 'input',
     span: 24,
-    componentProps: {
+    props: {
       placeholder: '请输入教室设置ID',
     },
   },
@@ -111,6 +165,8 @@ const fetchInstitutionOptions = async (setDefault = false) => {
 const reset = () => {
   formRef.value?.formRef?.resetFields()
   resetForm()
+  teacherName.value = ''
+  teacherOptions.value = []
 }
 
 // 保存
@@ -149,6 +205,19 @@ const onUpdate = async (id: string) => {
   await fetchInstitutionOptions(false) // 编辑时不设置默认值
   const { data } = await getCourse(id)
   Object.assign(form, data)
+  
+  // 如果有班主任ID，需要获取教师名字用于显示
+  if (data.mainTeacherId) {
+    try {
+      const { data: teacher } = await getTeacher(data.mainTeacherId.toString())
+      if (teacher) {
+        teacherName.value = teacher.name
+      }
+    } catch (error) {
+      console.error('获取教师信息失败', error)
+    }
+  }
+  
   visible.value = true
 }
 

@@ -33,6 +33,11 @@ export function listActiveTeachers(name?: string) {
   return http.get<TeacherResp[]>(`${BASE_URL}/active`, { name })
 }
 
+/** @desc 搜索教师（根据姓名或手机号） */
+export function searchTeachers(keyword: string) {
+  return http.get<TeacherResp[]>(`${BASE_URL}/search`, { keyword })
+}
+
 export interface TeacherDetailResp {
   id: string
   name: string
