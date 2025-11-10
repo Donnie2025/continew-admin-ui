@@ -12,24 +12,48 @@
     <div class="lesson-modal-container">
       <!-- 工具栏 -->
       <div class="toolbar">
-        <a-input-search
-          v-model="searchKeyword"
-          placeholder="搜索课节名称"
-          allow-clear
-          style="width: 280px"
-          @search="loadLessons"
-          @clear="loadLessons"
-        />
-        <a-button type="primary" @click="onAddLesson">
-          <template #icon><icon-plus /></template>
-          新增课节
-        </a-button>
+        <div class="toolbar-left">
+          <a-input-search
+            v-model="searchKeyword"
+            placeholder="搜索课节名称"
+            allow-clear
+            style="width: 280px"
+            @search="loadLessons"
+            @clear="loadLessons"
+          />
+          <a-button 
+            v-if="selectedLessonIds.length > 0" 
+            type="outline" 
+            status="danger"
+            @click="handleBatchDelete"
+          >
+            <template #icon><icon-delete /></template>
+            批量删除 ({{ selectedLessonIds.length }})
+          </a-button>
+        </div>
+        <a-space>
+          <a-button type="primary" @click="onAddLesson">
+            <template #icon><icon-plus /></template>
+            新增课节
+          </a-button>
+          <a-button type="primary" status="success" @click="onBatchAddLesson">
+            <template #icon><icon-plus /></template>
+            批量新建课节
+          </a-button>
+        </a-space>
       </div>
 
       <!-- 课节列表 -->
       <a-spin :loading="loading" style="width: 100%">
         <div class="lesson-table">
           <div class="table-header">
+            <div class="table-cell checkbox-cell">
+              <a-checkbox 
+                v-model="selectAll"
+                :indeterminate="isIndeterminate"
+                @change="handleSelectAll"
+              />
+            </div>
             <div class="table-cell index-cell">序号</div>
             <div class="table-cell name-cell">课节名称</div>
             <div class="table-cell time-cell">上课时间</div>
@@ -45,11 +69,17 @@
               :key="lesson.id"
               class="table-row"
             >
+              <div class="table-cell checkbox-cell">
+                <a-checkbox 
+                  :model-value="selectedLessonIds.includes(lesson.id)"
+                  @change="(checked: boolean) => handleSelectLesson(lesson.id, checked)"
+                />
+              </div>
               <div class="table-cell index-cell">{{ index + 1 }}</div>
               <div class="table-cell name-cell" :title="lesson.name">{{ lesson.name }}</div>
               <div class="table-cell time-cell">{{ formatDateTime(lesson.startTime) }}</div>
               <div class="table-cell duration-cell">{{ formatDuration(lesson.duration) }}</div>
-              <div class="table-cell seat-cell">1对{{ lesson.seatNum - 1 }}</div>
+              <div class="table-cell seat-cell">1对{{ typeof lesson.seatNum === 'string' ? parseInt(lesson.seatNum) : lesson.seatNum }}</div>
               <div class="table-cell teacher-cell">{{ lesson.teacherName || '-' }}</div>
               <div class="table-cell record-cell">
                 <a-tag :color="lesson.recordState === 1 ? 'green' : 'gray'">
@@ -79,7 +109,7 @@
     <!-- 新增/编辑课节弹窗 -->
     <a-modal
       v-model:visible="formVisible"
-      :title="isEdit ? '编辑课节' : '新增课节'"
+      :title="isEdit ? '编辑课节' : (isBatchMode ? '批量新建课节' : '新增课节')"
       width="600px"
       :mask-closable="false"
       @before-ok="handleSaveLesson"
@@ -87,11 +117,69 @@
     >
       <a-form :model="lessonForm" ref="lessonFormRef" layout="vertical">
         <a-form-item
+          v-if="!isBatchMode"
           label="课节名称"
           field="name"
           :rules="[{ required: true, message: '请输入课节名称' }]"
         >
           <a-input v-model="lessonForm.name" placeholder="请输入课节名称" :max-length="50" show-word-limit />
+        </a-form-item>
+        
+        <a-form-item
+          v-if="isBatchMode"
+          label="课堂名称"
+          field="name"
+          :rules="[{ required: true, message: '请输入课堂名称' }]"
+        >
+          <a-space style="width: 100%;">
+            <a-input 
+              v-model="lessonForm.name" 
+              placeholder="请输入课堂名称" 
+              :max-length="50" 
+              show-word-limit 
+              style="flex: 1; width: 400px;"
+            />
+            <span>-</span>
+            <a-input-number 
+              v-model="lessonForm.startNumber" 
+              placeholder="起始编号" 
+              :min="1" 
+              style="width: 150px;"
+            />
+          </a-space>
+        </a-form-item>
+        
+        <a-form-item
+          v-if="isBatchMode"
+          label="课堂数量"
+          field="lessonCount"
+          :rules="[{ required: true, message: '请输入课堂数量' }]"
+        >
+          <a-input-number 
+            v-model="lessonForm.lessonCount" 
+            placeholder="请输入课堂数量" 
+            :min="1" 
+            :max="50"
+            style="width: 100%"
+          />
+        </a-form-item>
+        
+        <a-form-item
+          v-if="isBatchMode"
+          label="每周规律"
+          field="weeklySchedule"
+          :rules="[{ required: true, message: '请选择每周规律' }]"
+        >
+          <a-space wrap>
+            <a-button
+              v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
+              :key="index"
+              :type="lessonForm.weeklySchedule.includes(index + 1) ? 'primary' : 'outline'"
+              @click="toggleWeekDay(index + 1)"
+            >
+              {{ day }}
+            </a-button>
+          </a-space>
         </a-form-item>
         
         <a-form-item
@@ -131,9 +219,6 @@
             </a-select>
             <span>分钟</span>
           </div>
-          <div style="color: #86909c; font-size: 12px; margin-top: 4px;">
-            课堂时长至少为10分钟
-          </div>
         </a-form-item>
         
         <a-form-item
@@ -142,7 +227,7 @@
           :rules="[{ required: true, message: '请选择教学形式' }]"
         >
           <a-select v-model="lessonForm.seatNum" placeholder="请选择1对几">
-            <a-option v-for="n in 12" :key="n" :value="n + 1">1对{{ n }}</a-option>
+            <a-option v-for="n in 12" :key="n" :value="n">1对{{ n }}</a-option>
           </a-select>
         </a-form-item>
         
@@ -177,7 +262,7 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
-import { IconPlus } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDelete } from '@arco-design/web-vue/es/icon'
 import {
   listCourseLessons,
   addLesson,
@@ -186,7 +271,7 @@ import {
   type LessonResp
 } from '@/apis/education/lesson'
 import { searchTeachers, type TeacherResp } from '@/apis/education/teacher'
-import { getCourse } from '@/apis/education/course'
+import { getCourse, listCourseTeachers, type CourseTeacherResp } from '@/apis/education/course'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -197,6 +282,7 @@ const courseName = ref('')
 const courseUid = ref('')
 const searchKeyword = ref('')
 const isEdit = ref(false)
+const isBatchMode = ref(false) // 是否为批量创建模式
 const editingLessonId = ref('')
 
 const lessons = ref<LessonResp[]>([])
@@ -204,6 +290,17 @@ const lessonFormRef = ref()
 
 // 教师搜索
 const teacherOptions = ref<{ label: string; value: string; id: number | string }[]>([])
+
+// 选中状态
+const selectedLessonIds = ref<string[]>([])
+const selectAll = ref(false)
+
+// 半选状态
+const isIndeterminate = computed(() => {
+  const selectedCount = selectedLessonIds.value.length
+  const totalCount = filteredLessons.value.length
+  return selectedCount > 0 && selectedCount < totalCount
+})
 
 const emit = defineEmits<{
   saveSuccess: []
@@ -214,11 +311,14 @@ const lessonForm = ref({
   name: '',
   startTime: '',
   durationHours: 0,
-  durationMinutes: 30,
-  seatNum: 2, // 默认1对1，值为2
+  durationMinutes: 25,
+  seatNum: 1, // 默认1对1，值为1
   teacherId: '',
   teacherName: '', // 用于显示教师名字
-  recordState: 0
+  recordState: 0,
+  lessonCount: 1, // 课堂数量（批量创建用）
+  weeklySchedule: [] as number[], // 每周规律：0-6表示周日到周六
+  startNumber: 1 // 批量创建时的起始编号
 })
 
 // 过滤后的课节列表
@@ -231,6 +331,43 @@ const filteredLessons = computed(() => {
   )
 })
 
+// 每周规律描述（computed 优化性能）
+const weeklyScheduleDescription = computed(() => {
+  if (!lessonForm.value.startTime || lessonForm.value.weeklySchedule.length === 0) {
+    return { line1: '', line2: '' }
+  }
+  
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const startDate = new Date(lessonForm.value.startTime)
+  const startDayOfWeek = startDate.getDay() // 0-6，0是周日
+  
+  // 计算第一节课的日期描述
+  const firstLessonDayIndex = lessonForm.value.weeklySchedule[0]
+  const firstLessonDay = weekDays[firstLessonDayIndex === 7 ? 0 : firstLessonDayIndex]
+  
+  // 格式化开始日期
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  // 计算第一节课的实际日期
+  let daysDiff = firstLessonDayIndex - (startDayOfWeek === 0 ? 7 : startDayOfWeek)
+  if (daysDiff < 0) daysDiff += 7
+  
+  const firstLessonDate = new Date(startDate)
+  firstLessonDate.setDate(firstLessonDate.getDate() + daysDiff)
+  
+  // 生成描述（分两行）
+  const selectedDays = lessonForm.value.weeklySchedule.map(d => weekDays[d === 7 ? 0 : d]).join('、')
+  return {
+    line1: `从${formatDate(firstLessonDate)} ${firstLessonDay}开始，`,
+    line2: `每周的${selectedDays}有课堂`
+  }
+})
+
 // 格式化日期时间
 const formatDateTime = (datetime: string) => {
   if (!datetime) return '-'
@@ -241,6 +378,18 @@ const formatDateTime = (datetime: string) => {
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 切换选择的星期几
+const toggleWeekDay = (day: number) => {
+  const index = lessonForm.value.weeklySchedule.indexOf(day)
+  if (index > -1) {
+    lessonForm.value.weeklySchedule.splice(index, 1)
+  } else {
+    lessonForm.value.weeklySchedule.push(day)
+  }
+  // 排序，保持从周一到周日的顺序
+  lessonForm.value.weeklySchedule.sort((a, b) => a - b)
 }
 
 // 格式化时长
@@ -335,27 +484,154 @@ const loadLessons = async () => {
   }
 }
 
-// 新增课节
-const onAddLesson = () => {
+// 新增单个课节
+const onAddLesson = async () => {
   isEdit.value = false
+  isBatchMode.value = false // 单个创建模式
   editingLessonId.value = ''
+  
+  // 计算默认上课时间：下一个小时的整点
+  const now = new Date()
+  const nextHour = new Date(now)
+  nextHour.setHours(now.getHours() + 1)
+  nextHour.setMinutes(0)
+  nextHour.setSeconds(0)
+  nextHour.setMilliseconds(0)
+  
+  // 格式化为 YYYY-MM-DD HH:mm:ss
+  const formatDefaultTime = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  }
+  
   lessonForm.value = {
     name: courseName.value, // 默认填充班级名称
-    startTime: '',
+    startTime: formatDefaultTime(nextHour),
     durationHours: 0,
-    durationMinutes: 30,
-    seatNum: 2,
+    durationMinutes: 25,
+    seatNum: 1,
     teacherId: '',
     teacherName: '',
-    recordState: 0
+    recordState: 0,
+    lessonCount: 1, // 默认1节课
+    weeklySchedule: [], // 清空每周规律
+    startNumber: 1 // 单个创建时不使用，设置默认值
   }
   teacherOptions.value = []
+  
+  // 获取课程关联的老师列表，并默认选中第一个老师
+  try {
+    const response = await listCourseTeachers(courseId.value)
+    const courseTeachers = response.data || []
+    if (courseTeachers.length > 0) {
+      const firstTeacher = courseTeachers[0]
+      lessonForm.value.teacherId = firstTeacher.teacherId
+      lessonForm.value.teacherName = firstTeacher.teacherName
+      // 设置老师选项，以便在autocomplete中显示
+      teacherOptions.value = [{
+        label: firstTeacher.teacherName,
+        value: firstTeacher.teacherId,
+        id: firstTeacher.teacherId
+      }]
+    }
+  } catch (error) {
+    console.error('获取课程老师列表失败:', error)
+  }
+  
+  formVisible.value = true
+}
+
+// 批量新建课节
+const onBatchAddLesson = async () => {
+  isEdit.value = false
+  isBatchMode.value = true // 批量创建模式
+  editingLessonId.value = ''
+  
+  // 计算默认上课时间：下一个小时的整点
+  const now = new Date()
+  const nextHour = new Date(now)
+  nextHour.setHours(now.getHours() + 1)
+  nextHour.setMinutes(0)
+  nextHour.setSeconds(0)
+  nextHour.setMilliseconds(0)
+  
+  // 格式化为 YYYY-MM-DD HH:mm:ss
+  const formatDefaultTime = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  }
+  
+  // 计算起始编号：获取最大编号 + 1
+  let maxNumber = 0
+  try {
+    const lessonList = lessons.value
+    if (lessonList && lessonList.length > 0) {
+      // 从课节名称中提取编号
+      lessonList.forEach(lesson => {
+        const match = lesson.name.match(/-\s*(\d+)$/)
+        if (match) {
+          const num = parseInt(match[1])
+          if (num > maxNumber) {
+            maxNumber = num
+          }
+        }
+      })
+    }
+  } catch (error) {
+    console.error('计算起始编号失败:', error)
+  }
+  
+  lessonForm.value = {
+    name: courseName.value, // 默认填充班级名称
+    startTime: formatDefaultTime(nextHour),
+    durationHours: 0,
+    durationMinutes: 25,
+    seatNum: 1,
+    teacherId: '',
+    teacherName: '',
+    recordState: 0,
+    lessonCount: 10, // 批量创建默认10节课
+    weeklySchedule: [], // 清空每周规律
+    startNumber: maxNumber + 1 // 起始编号为最大编号+1
+  }
+  teacherOptions.value = []
+  
+  // 获取课程关联的老师列表，并默认选中第一个老师
+  try {
+    const response = await listCourseTeachers(courseId.value)
+    const courseTeachers = response.data || []
+    if (courseTeachers.length > 0) {
+      const firstTeacher = courseTeachers[0]
+      lessonForm.value.teacherId = firstTeacher.teacherId
+      lessonForm.value.teacherName = firstTeacher.teacherName
+      // 设置老师选项，以便在autocomplete中显示
+      teacherOptions.value = [{
+        label: firstTeacher.teacherName,
+        value: firstTeacher.teacherId,
+        id: firstTeacher.teacherId
+      }]
+    }
+  } catch (error) {
+    console.error('获取课程老师列表失败:', error)
+  }
+  
   formVisible.value = true
 }
 
 // 编辑课节
 const onEditLesson = (lesson: LessonResp) => {
   isEdit.value = true
+  isBatchMode.value = false // 编辑时不是批量模式
   editingLessonId.value = lesson.id
   
   // 从总分钟数拆分为小时和分钟
@@ -368,10 +644,13 @@ const onEditLesson = (lesson: LessonResp) => {
     startTime: lesson.startTime,
     durationHours: hours,
     durationMinutes: minutes,
-    seatNum: lesson.seatNum || 2,
+    seatNum: typeof lesson.seatNum === 'string' ? parseInt(lesson.seatNum) : (lesson.seatNum || 1),
     teacherId: lesson.teacherId || '',
     teacherName: lesson.teacherName || '', // 填充教师名字
-    recordState: lesson.recordState || 0
+    recordState: typeof lesson.recordState === 'string' ? parseInt(lesson.recordState) : (lesson.recordState || 0),
+    lessonCount: 1, // 编辑时不支持批量
+    weeklySchedule: [], // 编辑时不使用
+    startNumber: 1 // 编辑时不使用，设置默认值
   }
   
   // 如果有教师信息，预填充到选项中
@@ -391,8 +670,8 @@ const onEditLesson = (lesson: LessonResp) => {
 // 保存课节
 const handleSaveLesson = async () => {
   try {
-    const valid = await lessonFormRef.value?.validate()
-    if (!valid) return false
+    // 表单验证
+    await lessonFormRef.value?.validate()
     
     // 验证时长（至少10分钟）
     const totalMinutes = lessonForm.value.durationHours * 60 + lessonForm.value.durationMinutes
@@ -407,11 +686,13 @@ const handleSaveLesson = async () => {
       return false
     }
     
-    // 准备提交数据
-    const startTime = new Date(lessonForm.value.startTime)
-    startTime.setSeconds(0)
-    const endTime = new Date(startTime.getTime() + totalMinutes * 60 * 1000)
+    // 如果是批量创建，验证每周规律
+    if (isBatchMode.value && lessonForm.value.weeklySchedule.length === 0) {
+      Message.error('批量创建时请选择每周规律')
+      return false
+    }
     
+    // 准备提交数据
     const formatDate = (date: Date) => {
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -421,34 +702,104 @@ const handleSaveLesson = async () => {
       return `${year}-${month}-${day} ${hours}:${minutes}:00`
     }
     
-    const submitData = {
-      courseId: courseId.value,
-      courseUid: courseUid.value,
-      name: lessonForm.value.name,
-      teacherId: lessonForm.value.teacherId,
-      startTime: formatDate(startTime),
-      endTime: formatDate(endTime),
-      duration: totalMinutes,
-      seatNum: lessonForm.value.seatNum,
-      recordState: lessonForm.value.recordState,
-      liveState: 0,
-      openState: 0
-    }
-    
     if (isEdit.value) {
+      // 编辑单个课节
+      const startTime = new Date(lessonForm.value.startTime)
+      startTime.setSeconds(0)
+      
+      const submitData = {
+        courseId: courseId.value,
+        courseUid: courseUid.value,
+        name: lessonForm.value.name,
+        teacherId: lessonForm.value.teacherId,
+        startTime: formatDate(startTime),
+        duration: totalMinutes,
+        seatNum: lessonForm.value.seatNum,
+        recordState: lessonForm.value.recordState,
+        liveState: 0,
+        openState: 0
+      }
+      
       await updateLesson(submitData, editingLessonId.value)
       Message.success('修改成功')
     } else {
-      await addLesson(submitData)
-      Message.success('新增成功')
+      // 新增课节（单个或批量）
+      if (!isBatchMode.value) {
+        // 单个创建
+        const startTime = new Date(lessonForm.value.startTime)
+        startTime.setSeconds(0)
+        
+        const submitData = {
+          courseId: courseId.value,
+          courseUid: courseUid.value,
+          name: lessonForm.value.name,
+          teacherId: lessonForm.value.teacherId,
+          startTime: formatDate(startTime),
+          duration: totalMinutes,
+          seatNum: lessonForm.value.seatNum,
+          recordState: lessonForm.value.recordState,
+          liveState: 0,
+          openState: 0
+        }
+        
+        await addLesson(submitData)
+        Message.success('新增成功')
+      } else {
+        // 批量创建
+        const startDate = new Date(lessonForm.value.startTime)
+        const weeklySchedule = lessonForm.value.weeklySchedule
+        
+        // 计算每节课的上课时间
+        const lessonDates: Date[] = []
+        let currentDate = new Date(startDate)
+        let createdCount = 0
+        
+        // 生成课节日期列表
+        while (createdCount < lessonForm.value.lessonCount) {
+          const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // 转换为1-7，7是周日
+          
+          if (weeklySchedule.includes(dayOfWeek)) {
+            lessonDates.push(new Date(currentDate))
+            createdCount++
+          }
+          
+          // 移到下一天
+          currentDate.setDate(currentDate.getDate() + 1)
+        }
+        
+        // 批量创建课节
+        const promises = lessonDates.map((date, index) => {
+          const submitData = {
+            courseId: courseId.value,
+            courseUid: courseUid.value,
+            name: `${lessonForm.value.name} - ${lessonForm.value.startNumber + index}`,
+            teacherId: lessonForm.value.teacherId,
+            startTime: formatDate(date),
+            duration: totalMinutes,
+            seatNum: lessonForm.value.seatNum,
+            recordState: lessonForm.value.recordState,
+            liveState: 0,
+            openState: 0
+          }
+          
+          return addLesson(submitData)
+        })
+        
+        await Promise.all(promises)
+        Message.success(`成功创建 ${lessonForm.value.lessonCount} 节课程`)
+      }
     }
     
     formVisible.value = false
     await loadLessons()
     emit('saveSuccess')
     return true
-  } catch (error) {
+  } catch (error: any) {
     console.error('保存课节失败:', error)
+    // 如果是表单验证错误，不显示错误消息（已经有字段提示）
+    if (error?.message && !error?.name?.includes('Validate')) {
+      Message.error(error.message || '保存失败')
+    }
     return false
   }
 }
@@ -466,21 +817,86 @@ const handleDeleteLesson = async (lessonId: string) => {
     await deleteLesson(lessonId)
     Message.success('删除成功')
     await loadLessons()
+    // 清空选中状态
+    selectedLessonIds.value = []
+    selectAll.value = false
     emit('saveSuccess')
   } catch (error) {
     console.error('删除课节失败:', error)
   }
 }
 
+// 全选/取消全选
+const handleSelectAll = (checked: boolean) => {
+  if (checked) {
+    selectedLessonIds.value = filteredLessons.value.map(lesson => lesson.id)
+  } else {
+    selectedLessonIds.value = []
+  }
+  selectAll.value = checked
+}
+
+// 单个选择
+const handleSelectLesson = (lessonId: string, checked: boolean) => {
+  if (checked) {
+    if (!selectedLessonIds.value.includes(lessonId)) {
+      selectedLessonIds.value.push(lessonId)
+    }
+  } else {
+    const index = selectedLessonIds.value.indexOf(lessonId)
+    if (index > -1) {
+      selectedLessonIds.value.splice(index, 1)
+    }
+  }
+  
+  // 更新全选状态
+  selectAll.value = selectedLessonIds.value.length === filteredLessons.value.length && filteredLessons.value.length > 0
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedLessonIds.value.length === 0) {
+    Message.warning('请至少选择一个课节')
+    return
+  }
+  
+  // 使用Arco Design的Modal确认对话框
+  const { Modal } = await import('@arco-design/web-vue')
+  
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除选中的 ${selectedLessonIds.value.length} 个课节吗？此操作将同步删除ClassIn中的对应课节，且不可恢复！`,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // 调用批量删除接口，直接传递数组
+        await deleteLesson(selectedLessonIds.value)
+        Message.success(`成功删除 ${selectedLessonIds.value.length} 个课节`)
+        await loadLessons()
+        // 清空选中状态
+        selectedLessonIds.value = []
+        selectAll.value = false
+        emit('saveSuccess')
+      } catch (error) {
+        console.error('批量删除课节失败:', error)
+        Message.error('批量删除失败')
+      }
+    }
+  })
+}
+
 // 关闭弹窗
 const handleCancel = () => {
   visible.value = false
+  // 清空选中状态
+  selectedLessonIds.value = []
+  selectAll.value = false
   courseId.value = ''
   courseName.value = ''
   courseUid.value = ''
   searchKeyword.value = ''
   lessons.value = []
-  courseTeachers.value = []
 }
 
 defineExpose({
@@ -501,6 +917,12 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .lesson-table {
@@ -549,6 +971,14 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.checkbox-cell {
+  width: 50px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .index-cell {

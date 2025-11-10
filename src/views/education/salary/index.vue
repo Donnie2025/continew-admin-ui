@@ -253,7 +253,6 @@ const columns: TableInstance['columns'] = [
   { title: 'Course Count', dataIndex: 'courseCount', slotName: 'courseCount' },
   { title: 'Course Amount', dataIndex: 'courseAmount', slotName: 'courseAmount' },
   { title: 'Deduction', dataIndex: 'deductionAmount', slotName: 'deductionAmount' },
-  { title: 'Tip', dataIndex: 'tipAmount', slotName: 'tipAmount' },
   { title: 'Final Amount', dataIndex: 'finalAmount', slotName: 'finalAmount' },
   { title: 'Is Settled', dataIndex: 'isSettled', slotName: 'isSettled' },
   { title: 'Rate', dataIndex: 'rate', slotName: 'rate' },

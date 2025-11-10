@@ -90,8 +90,9 @@ export function updateLesson(data: any, id: string) {
 }
 
 /** @desc 删除课堂 */
-export function deleteLesson(id: string) {
-  return http.del(BASE_URL, { ids: [id] })
+export function deleteLesson(id: string | string[]) {
+  const ids = Array.isArray(id) ? id : [id]
+  return http.del(BASE_URL, { ids })
 }
 
 /** @desc 导出课堂 */

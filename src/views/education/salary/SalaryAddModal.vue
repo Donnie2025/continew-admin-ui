@@ -141,12 +141,6 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
-    label: '小费金额',
-    field: 'tipAmount',
-    type: 'input',
-    span: 24,
-  },
-  {
     label: '备注',
     field: 'remark',
     type: 'input',

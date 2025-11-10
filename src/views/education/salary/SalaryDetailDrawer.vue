@@ -52,7 +52,7 @@
           </div>
         </div>
 
-        <div class="breakdown-item tip">
+        <div v-if="dataDetail?.tipAmount && Number(dataDetail.tipAmount) !== 0" class="breakdown-item tip">
           <div class="item-row">
             <span class="item-label">Tip Amount</span>
             <span class="item-value amount tip-amount">+ ₱{{ formatAmount(dataDetail?.tipAmount) }}</span>
@@ -106,8 +106,8 @@ const visible = ref(false)
 const settling = ref(false)
 
 // 格式化金额
-const formatAmount = (amount: number | undefined) => {
-  if (!amount) return '0.00'
+const formatAmount = (amount: number | string | undefined) => {
+  if (!amount && amount !== 0) return '0.00'
   return Number(amount).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -135,6 +135,8 @@ const handleSettle = () => {
     title: 'Confirm Settlement',
     content: 'Are you sure you want to mark this salary record as settled? This action cannot be undone.',
     onOk: async () => {
+      if (!dataDetail.value) return
+      
       try {
         settling.value = true
         

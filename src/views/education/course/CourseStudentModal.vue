@@ -407,6 +407,26 @@ defineExpose({
 .table-body {
   flex: 1;
   overflow-y: auto;
+  max-height: 400px;
+  
+  /* 美化滚动条 */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--color-fill-2);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-4);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--color-text-4);
+    }
+  }
 }
 
 .table-row {
@@ -452,6 +472,26 @@ defineExpose({
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  max-height: 440px;
+  
+  /* 美化滚动条 */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--color-fill-2);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-4);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--color-text-4);
+    }
+  }
 }
 
 .selected-item {
