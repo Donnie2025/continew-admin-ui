@@ -221,6 +221,12 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
+    label: '收款人姓名',
+    field: 'recvName',
+    type: 'input',
+    span: 24,
+  },
+  {
     label: '单价',
     field: 'rate',
     type: 'input-number',

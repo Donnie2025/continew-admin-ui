@@ -250,6 +250,7 @@ const columns: TableInstance['columns'] = [
   { title: 'Start Date', dataIndex: 'startDate', slotName: 'startDate' },
   { title: 'End Date', dataIndex: 'endDate', slotName: 'endDate' },
   { title: 'Name', dataIndex: 'teacherName', slotName: 'teacherName' },
+  { title: 'Recv Name', dataIndex: 'recvName', slotName: 'recvName' },
   { title: 'Course Count', dataIndex: 'courseCount', slotName: 'courseCount' },
   { title: 'Course Amount', dataIndex: 'courseAmount', slotName: 'courseAmount' },
   { title: 'Deduction', dataIndex: 'deductionAmount', slotName: 'deductionAmount' },
@@ -358,7 +359,8 @@ const onToggleStatus = (record: SalaryResp) => {
           isSettled: 1,
           rate: Number(salaryDetail.rate),
           groupName: salaryDetail.groupName,
-          remark: salaryDetail.remark
+          remark: salaryDetail.remark,
+          recvName: salaryDetail.recvName
         }, record.id)
         Message.success('状态已更改为已结算')
         search() // 刷新表格数据

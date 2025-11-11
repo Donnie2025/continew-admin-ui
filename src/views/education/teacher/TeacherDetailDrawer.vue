@@ -12,6 +12,7 @@
       <a-descriptions-item label="手机号码">{{ dataDetail?.phone }}</a-descriptions-item>
       <a-descriptions-item label="邮箱">{{ dataDetail?.email }}</a-descriptions-item>
       <a-descriptions-item label="所属组">{{ dataDetail?.groupName }}</a-descriptions-item>
+      <a-descriptions-item label="收款人姓名">{{ dataDetail?.recvName || '-' }}</a-descriptions-item>
       <a-descriptions-item label="头像">
         <a-image
           v-if="dataDetail?.avatar"

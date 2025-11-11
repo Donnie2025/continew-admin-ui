@@ -111,6 +111,7 @@ const columns: TableInstance['columns'] = [
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
   { title: '所属组', dataIndex: 'groupName', slotName: 'groupName' },
+  { title: '收款人姓名', dataIndex: 'recvName', slotName: 'recvName' },
   { title: '单价', dataIndex: 'rate', slotName: 'rate' },
   { title: '评分', dataIndex: 'score', slotName: 'score' },
   { title: '标签', dataIndex: 'tags', slotName: 'tags' },

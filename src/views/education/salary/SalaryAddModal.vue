@@ -48,6 +48,7 @@ interface FormData {
   deductionAmount?: number | string;
   tipAmount?: number | string;
   remark?: string;
+  recvName?: string;
   [key: string]: any;
 }
 
@@ -137,6 +138,12 @@ const columns: ColumnItem[] = reactive([
   {
     label: '扣款金额',
     field: 'deductionAmount',
+    type: 'input',
+    span: 24,
+  },
+  {
+    label: '收款人姓名',
+    field: 'recvName',
     type: 'input',
     span: 24,
   },

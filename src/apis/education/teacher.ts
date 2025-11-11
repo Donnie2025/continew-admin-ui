@@ -21,6 +21,7 @@ export interface TeacherResp {
   groupName: string
   sort: string
   status: string
+  recvName: string
   createTime: string
   updateTime: string
   createUserString: string
@@ -57,6 +58,7 @@ export interface TeacherDetailResp {
   groupName: string
   sort: string
   status: string
+  recvName: string
   createTime: string
   updateTime: string
   createUser: string

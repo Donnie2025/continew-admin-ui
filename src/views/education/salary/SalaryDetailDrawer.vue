@@ -15,6 +15,10 @@
           <span class="info-label">Teacher Name:</span>
           <span class="info-value teacher-name">{{ dataDetail?.teacherName }}</span>
         </div>
+        <div class="info-row" v-if="dataDetail?.recvName">
+          <span class="info-label">Recv Name:</span>
+          <span class="info-value">{{ dataDetail?.recvName }}</span>
+        </div>
         <div class="info-row">
           <span class="info-label">Period:</span>
           <span class="info-value">{{ dataDetail?.startDate }} ~ {{ dataDetail?.endDate }}</span>
@@ -154,7 +158,8 @@ const handleSettle = () => {
           isSettled: 1, // 设置为已结算
           rate: Number(dataDetail.value.rate),
           groupName: dataDetail.value.groupName,
-          remark: dataDetail.value.remark
+          remark: dataDetail.value.remark,
+          recvName: dataDetail.value.recvName
         }, dataId.value)
         
         Message.success('Salary record has been marked as settled')

@@ -18,6 +18,7 @@ export interface SalaryResp {
   rate: string
   groupName: string
   remark: string
+  recvName: string
   createTime: string
   createUserString: string
   updateUserString: string
@@ -39,6 +40,7 @@ export interface SalaryDetailResp {
   rate: string
   groupName: string
   remark: string
+  recvName: string
   createTime: string
   updateTime: string
   createUser: string
