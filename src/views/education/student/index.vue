@@ -54,6 +54,7 @@
         <a-space>
           <a-link v-permission="['education:student:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link v-permission="['education:student:update']" title="修改" @click="onUpdate(record)">修改</a-link>
+          <a-link v-permission="['education:student:update']" title="设置密码" @click="onSetPassword(record)">设置密码</a-link>
           <a-link
             v-permission="['education:student:delete']"
             status="danger"
@@ -70,6 +71,7 @@
     <StudentAddModal ref="StudentAddModalRef" @save-success="search" />
     <StudentDetailDrawer ref="StudentDetailDrawerRef" />
     <StudentBatchImportModal ref="StudentBatchImportModalRef" @import-success="search" />
+    <StudentSetPasswordModal ref="StudentSetPasswordModalRef" @save-success="search" />
   </div>
 </template>
 
@@ -78,6 +80,7 @@ import type { TableInstance } from '@arco-design/web-vue'
 import StudentAddModal from './StudentAddModal.vue'
 import StudentDetailDrawer from './StudentDetailDrawer.vue'
 import StudentBatchImportModal from './StudentBatchImportModal.vue'
+import StudentSetPasswordModal from './StudentSetPasswordModal.vue'
 import { type StudentResp, type StudentQuery, deleteStudent, exportStudent, listStudent } from '@/apis/education/student'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -114,7 +117,7 @@ const columns: TableInstance['columns'] = [
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 160,
+    width: 200,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
     show: has.hasPermOr(['education:student:get', 'education:student:update', 'education:student:delete'])
@@ -162,6 +165,12 @@ const StudentBatchImportModalRef = ref<InstanceType<typeof StudentBatchImportMod
 // 批量导入
 const onBatchImport = () => {
   StudentBatchImportModalRef.value?.onOpen()
+}
+
+const StudentSetPasswordModalRef = ref<InstanceType<typeof StudentSetPasswordModal>>()
+// 设置密码
+const onSetPassword = (record: StudentResp) => {
+  StudentSetPasswordModalRef.value?.onOpen(record.id, record.name)
 }
 </script>
 

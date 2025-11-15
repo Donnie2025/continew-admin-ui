@@ -59,6 +59,7 @@
         <a-space>
           <a-link v-permission="['education:teacher:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link v-permission="['education:teacher:update']" title="修改" @click="onUpdate(record)">修改</a-link>
+          <a-link v-permission="['education:teacher:update']" title="设置密码" @click="onSetPassword(record)">设置密码</a-link>
           <a-link
             v-permission="['education:teacher:delete']"
             status="danger"
@@ -74,6 +75,7 @@
 
     <TeacherAddModal ref="TeacherAddModalRef" @save-success="search" />
     <TeacherDetailDrawer ref="TeacherDetailDrawerRef" />
+    <TeacherSetPasswordModal ref="TeacherSetPasswordModalRef" @save-success="search" />
   </div>
 </template>
 
@@ -81,6 +83,7 @@
 import type { TableInstance } from '@arco-design/web-vue'
 import TeacherAddModal from './TeacherAddModal.vue'
 import TeacherDetailDrawer from './TeacherDetailDrawer.vue'
+import TeacherSetPasswordModal from './TeacherSetPasswordModal.vue'
 import { type TeacherResp, type TeacherQuery, deleteTeacher, exportTeacher, listTeacher } from '@/apis/education/teacher'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -122,7 +125,7 @@ const columns: TableInstance['columns'] = [
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 160,
+    width: 200,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
     show: has.hasPermOr(['education:teacher:get', 'education:teacher:update', 'education:teacher:delete'])
@@ -165,6 +168,12 @@ const TeacherDetailDrawerRef = ref<InstanceType<typeof TeacherDetailDrawer>>()
 // 详情
 const onDetail = (record: TeacherResp) => {
   TeacherDetailDrawerRef.value?.onOpen(record.id)
+}
+
+const TeacherSetPasswordModalRef = ref<InstanceType<typeof TeacherSetPasswordModal>>()
+// 设置密码
+const onSetPassword = (record: TeacherResp) => {
+  TeacherSetPasswordModalRef.value?.onOpen(record.id.toString(), record.name)
 }
 </script>
 

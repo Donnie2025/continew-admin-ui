@@ -10,7 +10,6 @@ export interface StudentResp {
   registerTime: string
   agentId: string
   avatar: string
-  password: string
   remark: string
   createTime: string
   institutionId: string
@@ -28,7 +27,6 @@ export interface StudentDetailResp {
   registerTime: string
   agentId: string
   avatar: string
-  password: string
   remark: string
   status: string
   createTime: string
@@ -93,4 +91,39 @@ export interface StudentBatchImportResp {
 /** @desc 批量导入学生 */
 export function batchImportStudent(data: StudentBatchImportReq) {
   return http.post<StudentBatchImportResp>(`${BASE_URL}/batch-import`, data)
+}
+
+export interface StudentSetPasswordReq {
+  studentId: number
+  password: string
+}
+
+/** @desc 设置学生密码 */
+export function setStudentPassword(data: StudentSetPasswordReq) {
+  return http.patch('/education/credential/set-password', {
+    userType: 'student',
+    userId: data.studentId,
+    password: data.password
+  })
+}
+
+export interface StudentVerifyPasswordReq {
+  phone: string
+  password: string
+}
+
+export interface StudentVerifyPasswordResp {
+  success: boolean
+  studentId?: number
+  studentName?: string
+  errorCount: number
+  remainingAttempts: number
+  frozen: boolean
+  unfreezeTime?: string
+  message: string
+}
+
+/** @desc 验证学生密码 */
+export function verifyStudentPassword(data: StudentVerifyPasswordReq) {
+  return http.post<StudentVerifyPasswordResp>(`${BASE_URL}/verify-password`, data)
 }

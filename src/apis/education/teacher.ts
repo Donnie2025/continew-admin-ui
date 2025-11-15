@@ -105,3 +105,17 @@ export function deleteTeacher(id: string) {
 export function exportTeacher(query: TeacherQuery) {
   return http.download(`${BASE_URL}/export`, query)
 }
+
+export interface TeacherSetPasswordReq {
+  teacherId: number
+  password: string
+}
+
+/** @desc 设置教师密码 */
+export function setTeacherPassword(data: TeacherSetPasswordReq) {
+  return http.patch('/education/credential/set-password', {
+    userType: 'teacher',
+    userId: data.teacherId,
+    password: data.password
+  })
+}
