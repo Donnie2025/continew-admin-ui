@@ -194,7 +194,7 @@ const calculateTotalAmount = async () => {
       
       // 统计第一页
       data.list.forEach((item: any) => {
-        totalAmount += Number(item.finalAmount) || 0
+        totalAmount += Number(item.courseAmount) || 0
         totalCount += Number(item.courseCount) || 0
       })
       
@@ -210,7 +210,7 @@ const calculateTotalAmount = async () => {
         results.forEach(result => {
           if (result.data && result.data.list) {
             result.data.list.forEach((item: any) => {
-              totalAmount += Number(item.finalAmount) || 0
+              totalAmount += Number(item.courseAmount) || 0
               totalCount += Number(item.courseCount) || 0
             })
           }
