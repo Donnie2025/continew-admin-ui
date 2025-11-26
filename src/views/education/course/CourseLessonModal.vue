@@ -196,7 +196,7 @@
             :time-picker-props="{
               hideDisabledOptions: true,
               disabledMinutes: () => {
-                return Array.from({ length: 60 }, (_, i) => i).filter(i => i % 10 !== 0)
+                return Array.from({ length: 60 }, (_, i) => i).filter(i => ![0, 10, 15, 20, 25, 30, 40, 45, 50].includes(i))
               }
             }"
           />
@@ -211,10 +211,12 @@
             <a-select v-model="lessonForm.durationMinutes" placeholder="分钟" style="width: 120px;">
               <a-option :value="0">0</a-option>
               <a-option :value="10">10</a-option>
+              <a-option :value="15">15</a-option>
               <a-option :value="20">20</a-option>
               <a-option :value="25">25</a-option>
               <a-option :value="30">30</a-option>
               <a-option :value="40">40</a-option>
+              <a-option :value="45">45</a-option>
               <a-option :value="50">50</a-option>
             </a-select>
             <span>分钟</span>

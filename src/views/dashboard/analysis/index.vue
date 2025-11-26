@@ -5,6 +5,9 @@
         <DataOverview />
       </div>
       <div>
+        <CourseWeeklyTrend />
+      </div>
+      <div>
         <a-grid :cols="24" :col-gap="14" :row-gap="14">
           <a-grid-item :span="{ xs: 24, sm: 24, md: 24, lg: 24, xl: 18, xxl: 18 }">
             <Geo />
@@ -25,6 +28,7 @@
           </a-grid-item>
         </a-grid>
       </div>
+      
     </a-space>
   </div>
 </template>
@@ -36,6 +40,7 @@ import Os from './components/Os.vue'
 import Browser from './components/Browser.vue'
 import Module from './components/Module.vue'
 import AccessTimeslot from './components/AccessTimeslot.vue'
+import CourseWeeklyTrend from './components/CourseWeeklyTrend.vue'
 
 defineOptions({ name: 'Analysis' })
 </script>

@@ -8,7 +8,7 @@
         <Ip />
       </a-grid-item>
       <a-grid-item :span="{ xs: 24, sm: 24, md: 24, lg: 24, xl: 6, xxl: 6 }">
-        <Demo1 />
+        <WeeklyCourse />
       </a-grid-item>
       <a-grid-item :span="{ xs: 24, sm: 24, md: 24, lg: 24, xl: 6, xxl: 6 }">
         <Demo2 />
@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import Pv from './Pv.vue'
 import Ip from './Ip.vue'
-import Demo1 from './Demo1.vue'
+import WeeklyCourse from './WeeklyCourse.vue'
 import Demo2 from './Demo2.vue'
 </script>
 

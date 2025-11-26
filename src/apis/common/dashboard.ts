@@ -49,3 +49,13 @@ export function getAnalysisOs() {
 export function getAnalysisBrowser() {
   return http.get<T.DashboardChartCommonResp[]>(`${BASE_URL}/analysis/browser`)
 }
+
+/** @desc 查询每周约课数量趋势 */
+export function getCourseWeeklyTrend(weeks: number) {
+  return http.get<T.DashboardChartCommonResp[]>(`${BASE_URL}/course/weekly-trend/${weeks}`)
+}
+
+/** @desc 查询本周约课总览 */
+export function getOverviewWeeklyCourse() {
+  return http.get<T.DashboardOverviewCommonResp>(`${BASE_URL}/overview/weekly-course`)
+}
