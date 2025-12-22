@@ -124,3 +124,14 @@ export interface SalaryBatchImportResp {
 export function batchImportSalary(data: SalaryBatchImportReq) {
   return http.post<SalaryBatchImportResp>(`${BASE_URL}/batch-import`, data)
 }
+
+/** 批量结算请求参数 */
+export interface SalaryBatchSettleReq {
+  ids: string[]
+  remark?: string
+}
+
+/** @desc 批量结算薪资 */
+export function batchSettleSalary(data: SalaryBatchSettleReq) {
+  return http.post<number>(`${BASE_URL}/batch-settle`, data)
+}

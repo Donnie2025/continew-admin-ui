@@ -18,6 +18,8 @@ export interface CourseResp {
   disabled: boolean
   teachers?: CourseTeacherResp[]
   students?: CourseStudentResp[]
+  teacherCount?: number
+  studentCount?: number
 }
 export interface CourseDetailResp {
   id: string

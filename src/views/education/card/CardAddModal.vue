@@ -36,55 +36,72 @@ const formRef = ref<InstanceType<typeof GiForm>>()
 const { yes_no, card_type } = useDict('yes_no', 'card_type')
 
 type FormType = {
-  name: string;
+  title: string;
+  subTitle: string;
+  description: string;
   type: string;
-  availableCount: string;
-  availableDay: string;
-  availableBalance: string;
+  initTimes: number | string;
+  initDays: number | string;
+  initBalance: string;
   price: string;
-  isAgentOnly: boolean | string;
-  isOnlineSale: boolean | string;
-  isRenewable: boolean | string;
-  renewTimes: string;
-  renewDays: string;
-  renewPrice: string;
+  sort: number | string;
+  institutionId: string;
+  remark: string;
 }
 
 const [form, resetForm] = useResetReactive<FormType>({
-  name: '',
+  title: '',
+  subTitle: '',
+  description: '',
   type: '',
-  availableCount: '',
-  availableDay: '',
-  availableBalance: '',
+  initTimes: '',
+  initDays: '',
+  initBalance: '',
   price: '',
-  isAgentOnly: false as boolean | string,
-  isOnlineSale: true as boolean | string,
-  isRenewable: true as boolean | string,
-  renewTimes: '',
-  renewDays: '',
-  renewPrice: '',
+  sort: 999,
+  institutionId: '',
+  remark: '',
 })
 
-watch([yes_no, card_type], ([yesNoVal, cardTypeVal]) => {
-  if (yesNoVal?.length && cardTypeVal?.length) {
-    const noValue = yesNoVal.find(item => item.label === '否')?.value || false
-    const yesValue = yesNoVal.find(item => item.label === '是')?.value || true
-    const cardTypeValue = cardTypeVal.find(item => item.label === '次卡无限期')?.value || '次卡无限期'
-    
-    form.isAgentOnly = noValue
-    form.isOnlineSale = yesValue
-    form.isRenewable = yesValue
+watch([card_type], ([cardTypeVal]) => {
+  if (cardTypeVal?.length) {
+    const cardTypeValue = cardTypeVal.find(item => item.label === '次卡无限期')?.value || 'TU'
     if (!form.type) form.type = cardTypeValue
   }
 }, { immediate: true })
 
 const columns: ColumnItem[] = reactive([
   {
-    label: '会员卡名称',
-    field: 'name',
+    label: '会员卡标题',
+    field: 'title',
     type: 'input',
     span: 24,
     required: true,
+    props: {
+      placeholder: '请输入会员卡标题',
+      maxLength: 100
+    }
+  },
+  {
+    label: '副标题',
+    field: 'subTitle',
+    type: 'input',
+    span: 24,
+    props: {
+      placeholder: '请输入副标题（可为空）',
+      maxLength: 200
+    }
+  },
+  {
+    label: '会员卡描述',
+    field: 'description',
+    type: 'textarea',
+    span: 24,
+    props: {
+      placeholder: '请输入会员卡描述（可为空）',
+      maxLength: 500,
+      rows: 3
+    }
   },
   {
     label: '会员卡类型',
@@ -97,81 +114,77 @@ const columns: ColumnItem[] = reactive([
     },
   },
   {
-    label: '可用次数',
-    field: 'availableCount',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '有效天数',
-    field: 'availableDay',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '可用余额',
-    field: 'availableBalance',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '代理售卖价格',
-    field: 'price',
-    type: 'input',
-    span: 24,
+    label: '初始次数',
+    field: 'initTimes',
+    type: 'input-number',
+    span: 12,
     props: {
-      placeholder: '请输入代理售卖价格（可为空）',
-      allowClear: true
+      placeholder: '请输入初始次数',
+      min: 0
     }
   },
   {
-    label: '是否仅代理可售',
-    field: 'isAgentOnly',
-    type: 'radio-group',
-    span: 24,
-    required: true,
+    label: '初始天数',
+    field: 'initDays',
+    type: 'input-number',
+    span: 12,
     props: {
-      options: yes_no,
-    },
+      placeholder: '请输入初始有效天数',
+      min: 0
+    }
   },
   {
-    label: '是否支持线上购卡',
-    field: 'isOnlineSale',
-    type: 'radio-group',
-    span: 24,
-    required: true,
+    label: '初始余额',
+    field: 'initBalance',
+    type: 'input-number',
+    span: 12,
     props: {
-      options: yes_no,
-    },
+      placeholder: '请输入初始余额',
+      min: 0,
+      precision: 2
+    }
   },
   {
-    label: '是否可续费',
-    field: 'isRenewable',
-    type: 'radio-group',
-    span: 24,
-    required: true,
+    label: '售卖价格',
+    field: 'price',
+    type: 'input-number',
+    span: 12,
     props: {
-      options: yes_no,
-    },
+      placeholder: '请输入售卖价格',
+      min: 0,
+      precision: 2
+    }
   },
   {
-    label: '续费次数',
-    field: 'renewTimes',
-    type: 'input',
-    span: 24,
+    label: '排序',
+    field: 'sort',
+    type: 'input-number',
+    span: 12,
+    props: {
+      placeholder: '请输入排序值（越小越靠前）',
+      min: 0
+    }
   },
   {
-    label: '续费天数',
-    field: 'renewDays',
+    label: '所属机构ID',
+    field: 'institutionId',
     type: 'input',
-    span: 24,
+    span: 12,
+    props: {
+      placeholder: '请输入所属机构ID（可为空）'
+    }
   },
   {
-    label: '续费价格',
-    field: 'renewPrice',
-    type: 'input',
+    label: '备注',
+    field: 'remark',
+    type: 'textarea',
     span: 24,
-  },
+    props: {
+      placeholder: '请输入备注信息（可为空）',
+      maxLength: 500,
+      rows: 2
+    }
+  }
 ])
 
 const reset = () => {
@@ -179,15 +192,9 @@ const reset = () => {
   resetForm()
   
   nextTick(() => {
-    const noValue = yes_no.value.find(item => item.label === '否')?.value || false
-    const yesValue = yes_no.value.find(item => item.label === '是')?.value || true
-    const cardTypeValue = card_type.value.find(item => item.label === '次卡无限期')?.value || '次卡无限期'
-    
-    form.isAgentOnly = noValue
-    form.isOnlineSale = yesValue
-    form.isRenewable = yesValue
+    const cardTypeValue = card_type.value.find(item => item.label === '次卡无限期')?.value || 'TU'
     form.type = cardTypeValue
-    form.price = ''
+    form.sort = 999
   })
 }
 

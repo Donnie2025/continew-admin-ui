@@ -13,7 +13,16 @@
       @refresh="search"
     >
       <template #toolbar-left>
-	    <a-input-search v-model="queryForm.name" placeholder="请输入会员卡名称" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.title" placeholder="请输入会员卡标题" allow-clear @search="search" />
+        <a-select 
+          v-model="queryForm.type" 
+          placeholder="请选择会员卡类型" 
+          allow-clear
+          style="width: 200px"
+          @change="search"
+        >
+          <a-option v-for="item in card_type" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+        </a-select>
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -32,14 +41,8 @@
       <template #type="{ record }">
         <GiCellTag :value="record.type" :dict="card_type" />
       </template>
-      <template #isAgentOnly="{ record }">
-        <GiCellTag :value="record.isAgentOnly" :dict="yes_no" />
-      </template>
-      <template #isOnlineSale="{ record }">
-        <GiCellTag :value="record.isOnlineSale" :dict="yes_no" />
-      </template>
-      <template #isRenewable="{ record }">
-        <GiCellTag :value="record.isRenewable" :dict="yes_no" />
+      <template #status="{ record }">
+        <GiCellTag :value="record.status" :dict="yes_no" />
       </template>
       <template #action="{ record }">
         <a-space>
@@ -75,10 +78,11 @@ import has from '@/utils/has'
 
 defineOptions({ name: 'Card' })
 
-const { yes_no,card_type } = useDict('yes_no','card_type')
+const { yes_no, card_type } = useDict('yes_no', 'card_type')
 
 const queryForm = reactive<CardQuery>({
-  name: undefined,
+  title: undefined,
+  type: undefined,
   sort: ['id,desc']
 })
 
@@ -91,11 +95,14 @@ const {
 } = useTable((page) => listCard({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
   { title: 'ID', dataIndex: 'id', slotName: 'id' },
-  { title: '会员卡名称', dataIndex: 'name', slotName: 'name' },
+  { title: '会员卡标题', dataIndex: 'title', slotName: 'title' },
   { title: '会员卡类型', dataIndex: 'type', slotName: 'type' },
-  { title: '可用次数', dataIndex: 'availableCount', slotName: 'availableCount' },
-  { title: '有效天数', dataIndex: 'availableDay', slotName: 'availableDay' },
-  { title: '可用余额', dataIndex: 'availableBalance', slotName: 'availableBalance' },
+  { title: '初始次数', dataIndex: 'initTimes', slotName: 'initTimes' },
+  { title: '初始天数', dataIndex: 'initDays', slotName: 'initDays' },
+  { title: '初始余额', dataIndex: 'initBalance', slotName: 'initBalance' },
+  { title: '售卖价格', dataIndex: 'price', slotName: 'price' },
+  { title: '排序', dataIndex: 'sort', slotName: 'sort' },
+  { title: '状态', dataIndex: 'status', slotName: 'status' },
   { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime' },
   {
     title: '操作',
@@ -110,7 +117,8 @@ const columns: TableInstance['columns'] = [
 
 // 重置
 const reset = () => {
-  queryForm.name = undefined
+  queryForm.title = undefined
+  queryForm.type = undefined
   search()
 }
 

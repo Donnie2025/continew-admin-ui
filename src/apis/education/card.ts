@@ -4,18 +4,17 @@ const BASE_URL = '/education/card'
 
 export interface CardResp {
   id: string
-  name: string
+  title: string
+  subTitle: string
+  description: string
   type: string
-  availableCount: string
-  availableDay: string
-  availableBalance: string
+  initTimes: number
+  initDays: number
+  initBalance: string
   price: string
-  isAgentOnly: string
-  isOnlineSale: string
-  isRenewable: string
-  renewTimes: string
-  renewDays: string
-  renewPrice: string
+  sort: number
+  institutionId: string
+  remark: string
   status: string
   createTime: string
   createUserString: string
@@ -24,18 +23,17 @@ export interface CardResp {
 }
 export interface CardDetailResp {
   id: string
-  name: string
+  title: string
+  subTitle: string
+  description: string
   type: string
-  availableCount: string
-  availableDay: string
-  availableBalance: string
+  initTimes: number
+  initDays: number
+  initBalance: string
   price: string
-  isAgentOnly: string
-  isOnlineSale: string
-  isRenewable: string
-  renewTimes: string
-  renewDays: string
-  renewPrice: string
+  sort: number
+  institutionId: string
+  remark: string
   status: string
   createTime: string
   updateTime: string
@@ -45,7 +43,8 @@ export interface CardDetailResp {
   updateUserString: string
 }
 export interface CardQuery {
-  name: string | undefined
+  title: string | undefined
+  type: string | undefined
   sort: Array<string>
 }
 export interface CardPageQuery extends CardQuery, PageQuery {}

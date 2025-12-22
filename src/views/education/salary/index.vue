@@ -10,6 +10,10 @@
       :pagination="pagination"
       :disabled-tools="['size']"
       :disabled-column-keys="['name']"
+      :row-selection="{ type: 'checkbox', showCheckedAll: true }"
+      :selected-keys="selectedRowKeys"
+      @select="onSelect"
+      @select-all="onSelectAll"
       @refresh="search"
     >
       <template #toolbar-left>
@@ -81,6 +85,16 @@
           <template #icon><icon-download /></template>
           <template #default>导出</template>
         </a-button>
+        <a-button 
+          v-permission="['education:salary:update']" 
+          type="outline" 
+          status="warning" 
+          :disabled="selectedRowKeys.length === 0"
+          @click="onBatchSettle"
+        >
+          <template #icon><icon-check-circle /></template>
+          <template #default>批量结算 ({{ selectedRowKeys.length }})</template>
+        </a-button>
         <div style="width: 100%; margin-top: 0px;">
           <a-space size="large">
             <a-tag color="orangered" size="large" style="font-size: 14px; padding: 8px 16px; font-weight: 500;">
@@ -132,7 +146,7 @@ import { Message, Modal } from '@arco-design/web-vue'
 import SalaryAddModal from './SalaryAddModal.vue'
 import SalaryDetailDrawer from './SalaryDetailDrawer.vue'
 import SalaryBatchImportModal from './SalaryBatchImportModal.vue'
-import { type SalaryResp, type SalaryQuery, deleteSalary, exportSalary, listSalary, updateSalaryStatus, getSalary, updateSalary, initializeWeeklySalaryData } from '@/apis/education/salary'
+import { type SalaryResp, type SalaryQuery, deleteSalary, exportSalary, listSalary, updateSalaryStatus, getSalary, updateSalary, initializeWeeklySalaryData, batchSettleSalary, type SalaryBatchSettleReq } from '@/apis/education/salary'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
@@ -177,6 +191,23 @@ const cleanQueryParams = (params: any) => {
 // 总金额和总课程数（所有符合条件的数据）
 const totalFinalAmount = ref(0)
 const totalCourseCount = ref(0)
+
+// 表格行选择
+const selectedRowKeys = ref<string[]>([])
+
+// 单选处理
+const onSelect = (rowKeys: string[]) => {
+  selectedRowKeys.value = rowKeys
+}
+
+// 全选处理
+const onSelectAll = (checked: boolean) => {
+  if (checked) {
+    selectedRowKeys.value = dataList.value.map(item => item.id)
+  } else {
+    selectedRowKeys.value = []
+  }
+}
 
 // 计算所有数据的总金额和总课程数
 const calculateTotalAmount = async () => {
@@ -237,6 +268,7 @@ const {
 
 // 重写 search 方法，在搜索时计算总金额
 const search = async () => {
+  selectedRowKeys.value = [] // 清空选择
   await originalSearch()
   await calculateTotalAmount()
 }
@@ -249,8 +281,8 @@ onMounted(() => {
 const columns: TableInstance['columns'] = [
   { title: 'Start Date', dataIndex: 'startDate', slotName: 'startDate' },
   { title: 'End Date', dataIndex: 'endDate', slotName: 'endDate' },
-  { title: 'Name', dataIndex: 'teacherName', slotName: 'teacherName' },
   { title: 'Recv Name', dataIndex: 'recvName', slotName: 'recvName' },
+  { title: 'Name', dataIndex: 'teacherName', slotName: 'teacherName' },
   { title: 'Course Count', dataIndex: 'courseCount', slotName: 'courseCount' },
   { title: 'Course Amount', dataIndex: 'courseAmount', slotName: 'courseAmount' },
   { title: 'Deduction', dataIndex: 'deductionAmount', slotName: 'deductionAmount' },
@@ -406,6 +438,50 @@ const SalaryBatchImportModalRef = ref<InstanceType<typeof SalaryBatchImportModal
 // 批量导入
 const onBatchImport = () => {
   SalaryBatchImportModalRef.value?.onOpen()
+}
+
+// 批量结算
+const onBatchSettle = () => {
+  if (selectedRowKeys.value.length === 0) {
+    Message.warning('请选择要结算的薪资记录')
+    return
+  }
+
+  // 检查选中的记录是否都是未结算状态
+  const selectedRecords = dataList.value.filter(item => selectedRowKeys.value.includes(item.id))
+  const settledRecords = selectedRecords.filter(record => String(record.isSettled).trim() === '1')
+  
+  if (settledRecords.length > 0) {
+    const settledNames = settledRecords.map(record => record.teacherName).join(', ')
+    Message.warning(`以下薪资记录已结算，无法重复结算: ${settledNames}`)
+    return
+  }
+
+  // 获取要结算的老师名字
+  const teacherNames = selectedRecords.map(record => record.teacherName).join(', ')
+
+  Modal.confirm({
+    title: '确认批量结算',
+    content: `确定要将以下 ${selectedRowKeys.value.length} 条薪资记录标记为已结算吗？\n\n老师：${teacherNames}`,
+    onOk: async () => {
+      try {
+        loading.value = true
+        const req: SalaryBatchSettleReq = {
+          ids: selectedRowKeys.value,
+          remark: '批量结算操作'
+        }
+        const { data } = await batchSettleSalary(req)
+        Message.success(`成功结算 ${data} 条薪资记录`)
+        selectedRowKeys.value = [] // 清空选择
+        search() // 刷新表格数据
+      } catch (error) {
+        console.error('批量结算失败:', error)
+        Message.error('批量结算失败')
+      } finally {
+        loading.value = false
+      }
+    }
+  })
 }
 </script>
 

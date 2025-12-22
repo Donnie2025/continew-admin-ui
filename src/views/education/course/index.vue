@@ -35,6 +35,46 @@
         <span v-if="record.mainTeacherName">{{ record.mainTeacherName }}</span>
         <span v-else style="color: #999">未设置</span>
       </template>
+      <template #teacherCount="{ record }">
+        <a-tooltip v-if="record.teacherCount && record.teacherCount > 0" position="right">
+          <span class="count-cell count-cell-active">{{ record.teacherCount }}</span>
+          <template #content>
+            <div class="tooltip-content">
+              <div class="tooltip-header">教师列表 ({{ record.teacherCount }})</div>
+              <div v-for="teacher in record.teachers" :key="teacher.teacherId" class="tooltip-item">
+                <a-avatar :size="24" style="margin-right: 8px">
+                  <icon-user />
+                </a-avatar>
+                <div class="tooltip-info">
+                  <div class="tooltip-name">{{ teacher.teacherName }}</div>
+                  <div class="tooltip-detail">{{ teacher.teacherPhone || teacher.teacherEmail || '-' }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </a-tooltip>
+        <span v-else class="count-cell">--</span>
+      </template>
+      <template #studentCount="{ record }">
+        <a-tooltip v-if="record.studentCount && record.studentCount > 0" position="right">
+          <span class="count-cell count-cell-active">{{ record.studentCount }}</span>
+          <template #content>
+            <div class="tooltip-content">
+              <div class="tooltip-header">学生列表 ({{ record.studentCount }})</div>
+              <div v-for="student in record.students" :key="student.studentId" class="tooltip-item">
+                <a-avatar :size="24" style="margin-right: 8px">
+                  <icon-user />
+                </a-avatar>
+                <div class="tooltip-info">
+                  <div class="tooltip-name">{{ student.studentName }}</div>
+                  <div class="tooltip-detail">{{ student.studentPhone || student.studentEmail || '-' }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </a-tooltip>
+        <span v-else class="count-cell">--</span>
+      </template>
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:course:get']" title="详情" @click="onDetail(record)">详情</a-link>
@@ -70,13 +110,18 @@ import CourseDetailDrawer from './CourseDetailDrawer.vue'
 import CourseTeacherModal from './CourseTeacherModal.vue'
 import CourseStudentModal from './CourseStudentModal.vue'
 import CourseLessonModal from './CourseLessonModal.vue'
-import { type CourseResp, type CourseQuery, deleteCourse, exportCourse, listCourse } from '@/apis/education/course'
+import { type CourseResp, type CourseQuery, deleteCourse, exportCourse, listCourse, listCourseTeachers, listCourseStudents } from '@/apis/education/course'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
 
 defineOptions({ name: 'Course' })
+
+// 在组件挂载时调用search方法
+onMounted(() => {
+  search()
+})
 
 
 const queryForm = reactive<CourseQuery>({
@@ -90,13 +135,41 @@ const {
   tableData: dataList,
   loading,
   pagination,
-  search,
+  search: originalSearch,
   handleDelete
-} = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: true })
+} = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: false })
+
+// 重写search方法，处理教师和学生数量
+const search = async () => {
+  await originalSearch()
+  
+  // 获取班级的教师和学生数量
+  if (dataList.value && dataList.value.length > 0) {
+    for (const course of dataList.value) {
+      try {
+        // 获取教师列表
+        const teachersRes = await listCourseTeachers(course.id)
+        const teachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.data || [])
+        course.teachers = teachers
+        course.teacherCount = teachers.length
+        
+        // 获取学生列表
+        const studentsRes = await listCourseStudents(course.id)
+        const students = Array.isArray(studentsRes) ? studentsRes : (studentsRes?.data || [])
+        course.students = students
+        course.studentCount = students.length
+      } catch (error) {
+        console.error(`获取班级[${course.id}]的教师和学生数量失败:`, error)
+      }
+    }
+  }
+}
 const columns: TableInstance['columns'] = [
   { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
   { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 120 },
   { title: '所属机构', dataIndex: 'institutionName', slotName: 'institutionName', width: 150 },
+  { title: '教师', dataIndex: 'teacherCount', slotName: 'teacherCount', width: 80, align: 'center' },
+  { title: '班级学生', dataIndex: 'studentCount', slotName: 'studentCount', width: 80, align: 'center' },
   { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime', width: 180 },
   {
     title: '操作',
@@ -166,4 +239,84 @@ const onManageLessons = (record: CourseResp) => {
 }
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.count-cell {
+  display: inline-block;
+  min-width: 24px;
+  padding: 0 4px;
+  color: var(--color-text-3);
+  font-weight: 500;
+  cursor: default;
+  transition: all 0.2s;
+
+  &.count-cell-active {
+    color: var(--color-text-1);
+    cursor: pointer;
+    background-color: var(--color-fill-2);
+    border-radius: 12px;
+    padding: 2px 8px;
+    
+    &:hover {
+      color: var(--color-primary-6);
+      background-color: var(--color-primary-light-1);
+    }
+  }
+}
+
+.tooltip-content {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  width: 240px;
+  background-color: var(--color-bg-popup);
+  border-radius: 6px;
+}
+
+.tooltip-header {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-2);
+  color: var(--color-text-1);
+}
+
+.tooltip-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background-color: var(--color-fill-1);
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--color-fill-2);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.tooltip-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tooltip-name {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  color: var(--color-text-1);
+}
+
+.tooltip-detail {
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

@@ -2,24 +2,21 @@
   <a-drawer v-model:visible="visible" title="会员卡管理详情" :width="width >= 600 ? 600 : '100%'" :footer="false">
     <a-descriptions :column="2" size="large" class="general-description">
       <a-descriptions-item label="ID">{{ dataDetail?.id }}</a-descriptions-item>
-      <a-descriptions-item label="会员卡名称">{{ dataDetail?.name }}</a-descriptions-item>
+      <a-descriptions-item label="会员卡标题">{{ dataDetail?.title }}</a-descriptions-item>
+      <a-descriptions-item label="副标题">{{ dataDetail?.subTitle }}</a-descriptions-item>
+      <a-descriptions-item label="会员卡描述" :span="2">{{ dataDetail?.description }}</a-descriptions-item>
       <a-descriptions-item label="会员卡类型">{{ dataDetail?.type }}</a-descriptions-item>
-      <a-descriptions-item label="可用次数">{{ dataDetail?.availableCount }}</a-descriptions-item>
-      <a-descriptions-item label="有效天数">{{ dataDetail?.availableDay }}</a-descriptions-item>
-      <a-descriptions-item label="可用余额">{{ dataDetail?.availableBalance }}</a-descriptions-item>
-      <a-descriptions-item label="代理售卖价格">{{ dataDetail?.price }}</a-descriptions-item>
-      <a-descriptions-item label="是否仅代理可售">{{ dataDetail?.isAgentOnly }}</a-descriptions-item>
-      <a-descriptions-item label="是否支持线上购卡">{{ dataDetail?.isOnlineSale }}</a-descriptions-item>
-      <a-descriptions-item label="是否可续费">{{ dataDetail?.isRenewable }}</a-descriptions-item>
-      <a-descriptions-item label="续费次数">{{ dataDetail?.renewTimes }}</a-descriptions-item>
-      <a-descriptions-item label="续费天数">{{ dataDetail?.renewDays }}</a-descriptions-item>
-      <a-descriptions-item label="续费价格">{{ dataDetail?.renewPrice }}</a-descriptions-item>
+      <a-descriptions-item label="初始次数">{{ dataDetail?.initTimes }}</a-descriptions-item>
+      <a-descriptions-item label="初始天数">{{ dataDetail?.initDays }}</a-descriptions-item>
+      <a-descriptions-item label="初始余额">{{ dataDetail?.initBalance }}</a-descriptions-item>
+      <a-descriptions-item label="售卖价格">{{ dataDetail?.price }}</a-descriptions-item>
+      <a-descriptions-item label="排序">{{ dataDetail?.sort }}</a-descriptions-item>
+      <a-descriptions-item label="所属机构ID">{{ dataDetail?.institutionId }}</a-descriptions-item>
       <a-descriptions-item label="状态">{{ dataDetail?.status }}</a-descriptions-item>
+      <a-descriptions-item label="备注" :span="2">{{ dataDetail?.remark }}</a-descriptions-item>
       <a-descriptions-item label="创建时间">{{ dataDetail?.createTime }}</a-descriptions-item>
       <a-descriptions-item label="更新时间">{{ dataDetail?.updateTime }}</a-descriptions-item>
-      <a-descriptions-item label="创建人">{{ dataDetail?.createUser }}</a-descriptions-item>
       <a-descriptions-item label="创建人">{{ dataDetail?.createUserString }}</a-descriptions-item>
-      <a-descriptions-item label="修改人">{{ dataDetail?.updateUser }}</a-descriptions-item>
       <a-descriptions-item label="修改人">{{ dataDetail?.updateUserString }}</a-descriptions-item>
     </a-descriptions>
   </a-drawer>

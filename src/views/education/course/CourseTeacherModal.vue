@@ -55,6 +55,10 @@
                   <span v-else>暂无可选老师</span>
                 </template>
               </a-empty>
+              <!-- 滚动提示 -->
+              <div v-if="availableTeachers.length > 10" class="scroll-hint">
+                <icon-down /> 下滚查看更多老师
+              </div>
             </div>
           </div>
         </a-spin>
@@ -106,7 +110,7 @@
 
 <script setup lang="ts">
 import { Message, Modal } from '@arco-design/web-vue'
-import { IconUser, IconClose } from '@arco-design/web-vue/es/icon'
+import { IconUser, IconClose, IconDown } from '@arco-design/web-vue/es/icon'
 import {
   listCourseTeachers,
   addTeachersToCourse,
@@ -401,6 +405,8 @@ defineExpose({
 .table-body {
   flex: 1;
   overflow-y: auto;
+  max-height: 400px; /* 设置最大高度，确保滚动条显示 */
+  scrollbar-width: thin; /* Firefox */
 }
 
 .table-row {
@@ -510,6 +516,43 @@ defineExpose({
 :deep(.arco-spin) {
   display: flex;
   flex-direction: column;
+}
+
+/* 滚动提示样式 */
+.scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  background-color: var(--color-fill-1);
+  border-top: 1px solid var(--color-border-2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* WebKit浏览器的滚动条样式 */
+.table-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-body::-webkit-scrollbar-track {
+  background: var(--color-fill-1);
+}
+
+.table-body::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 4px;
+}
+
+.table-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fill-4);
 }
 </style>
 
