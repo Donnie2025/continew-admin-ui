@@ -76,7 +76,7 @@ const uploadFile = ref()
 const [form, resetForm] = useResetReactive({
   isShow: '1',
   isFixed: '0',
-  sort: '999',
+  sort: 999,
   score: 5,
   gender: 'female',
   rate: 60
@@ -278,6 +278,16 @@ const columns: ColumnItem[] = reactive([
     span: 24
   },
   {
+    label: '标签',
+    field: 'tags',
+    type: 'input',
+    span: 24,
+    props: {
+      placeholder: '请输入教师标签，多个标签用逗号分隔'
+    },
+    help: '例如：资深教师,口语专家,雅思培训师'
+  },
+  {
     label: '描述',
     field: 'description',
     type: 'textarea',
@@ -289,9 +299,15 @@ const columns: ColumnItem[] = reactive([
   {
     label: '排序',
     field: 'sort',
-    type: 'input',
+    type: 'input-number',
     span: 24,
     required: true,
+    props: {
+      min: 1,
+      max: 9999,
+      placeholder: '请输入排序值，数值越小排序越靠前'
+    },
+    help: '排序值：1-10为高优先级，11-100为中优先级，大于100为低优先级'
   }
 ])
 

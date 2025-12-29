@@ -119,3 +119,8 @@ export function setTeacherPassword(data: TeacherSetPasswordReq) {
     password: data.password
   })
 }
+
+/** @desc 置顶教师 */
+export function setTeacherTop(id: number) {
+  return http.post(`${BASE_URL}/${id}/set-top`)
+}
