@@ -9,7 +9,7 @@ export interface MaterialResp {
   level: string
   category: string
   coverImg: string
-  desc: string
+  description: string
   isShow: string
   sort: string
   status: string
@@ -28,7 +28,7 @@ export interface MaterialDetailResp {
   level: string
   category: string
   coverImg: string
-  desc: string
+  description: string
   isShow: string
   sort: string
   status: string
@@ -45,11 +45,9 @@ export interface MaterialQuery {
   level: string | undefined
   category: string | undefined
   isShow: string | undefined
-  sort: string | undefined
-  status: string | undefined
-  createUser: string | undefined
+  status: number | undefined
+  createUser: number | undefined
   createTime: string | undefined
-  sort: Array<string>
 }
 export interface MaterialPageQuery extends MaterialQuery, PageQuery {}
 

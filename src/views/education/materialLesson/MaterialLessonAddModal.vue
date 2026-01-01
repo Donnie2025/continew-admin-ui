@@ -17,6 +17,7 @@
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getMaterialLesson, addMaterialLesson, updateMaterialLesson } from '@/apis/education/materialLesson'
+import { listMaterial, type MaterialResp } from '@/apis/education/material'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -34,23 +35,43 @@ const title = computed(() => (isUpdate.value ? '修改课节' : '新增课节'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 
 const [form, resetForm] = useResetReactive({
-  // todo 待补充
+  materialId: undefined,
+  lessonName: ''
 })
+
+// 教材列表
+const materialList = ref<MaterialResp[]>([])
+
+// 获取教材列表
+const getMaterialList = async () => {
+  try {
+    const { data } = await listMaterial({ 
+      page: 1, 
+      size: 1000,
+      sort: ['sort,asc'] // 按sort字段正向排序
+    } as any)
+    materialList.value = data.list || []
+  } catch (error) {
+    console.error('获取教材列表失败:', error)
+  }
+}
 
 const columns: ColumnItem[] = reactive([
   {
-    label: '教材ID',
+    label: '选择教材',
     field: 'materialId',
-    type: 'input',
+    type: 'select',
     span: 24,
     required: true,
-  },
-  {
-    label: '教材名称（冗余字段，格式：name + level）',
-    field: 'materialName',
-    type: 'input',
-    span: 24,
-    required: true,
+    props: {
+      placeholder: '请选择教材',
+      filterable: true,
+      allowSearch: true,
+      options: computed(() => materialList.value.map(item => ({
+        label: `${item.name} (${item.level})`,
+        value: item.id
+      })))
+    }
   },
   {
     label: '课节名字',
@@ -58,27 +79,9 @@ const columns: ColumnItem[] = reactive([
     type: 'input',
     span: 24,
     required: true,
-  },
-  {
-    label: '状态（1:启用 0:禁用）',
-    field: 'status',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '创建人',
-    field: 'createUser',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '创建时间',
-    field: 'createTime',
-    type: 'input',
-    span: 24,
-    required: true,
+    props: {
+      placeholder: '请输入课节名字'
+    }
   },
 ])
 
@@ -111,6 +114,7 @@ const save = async () => {
 const onAdd = async () => {
   reset()
   dataId.value = ''
+  await getMaterialList() // 获取教材列表
   visible.value = true
 }
 

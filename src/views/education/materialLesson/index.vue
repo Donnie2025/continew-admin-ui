@@ -14,11 +14,8 @@
     >
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.materialId" placeholder="请输入教材ID" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.materialName" placeholder="请输入教材名称（冗余字段，格式：name + level）" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.materialName" placeholder="请输入教材名称" allow-clear @search="search" />
 	    <a-input-search v-model="queryForm.lessonName" placeholder="请输入课节名字" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.status" placeholder="请输入状态（1:启用 0:禁用）" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.createUser" placeholder="请输入创建人" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.createTime" placeholder="请输入创建时间" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -87,16 +84,10 @@ const {
   handleDelete
 } = useTable((page) => listMaterialLesson({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
-  { title: '主键ID', dataIndex: 'id', slotName: 'id' },
   { title: '教材ID', dataIndex: 'materialId', slotName: 'materialId' },
-  { title: '教材名称（冗余字段，格式：name + level）', dataIndex: 'materialName', slotName: 'materialName' },
+  { title: '教材名称', dataIndex: 'materialName', slotName: 'materialName' },
   { title: '课节名字', dataIndex: 'lessonName', slotName: 'lessonName' },
   { title: '课节链接', dataIndex: 'lessonUrl', slotName: 'lessonUrl' },
-  { title: '状态（1:启用 0:禁用）', dataIndex: 'status', slotName: 'status' },
-  { title: '创建人', dataIndex: 'createUserString', slotName: 'createUser' },
-  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime' },
-  { title: '修改人', dataIndex: 'updateUserString', slotName: 'updateUser' },
-  { title: '修改时间', dataIndex: 'updateTime', slotName: 'updateTime' },
   {
     title: '操作',
     dataIndex: 'action',

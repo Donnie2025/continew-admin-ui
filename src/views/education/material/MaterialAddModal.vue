@@ -34,7 +34,14 @@ const title = computed(() => (isUpdate.value ? '修改教材' : '新增教材'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 
 const [form, resetForm] = useResetReactive({
-  // todo 待补充
+  code: '',
+  name: '',
+  level: '',
+  category: '',
+  coverImg: '',
+  description: '',
+  isShow: true, // 默认展示
+  sort: 999 // 默认排序
 })
 
 const columns: ColumnItem[] = reactive([
@@ -53,54 +60,58 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
-    label: '级别（K1:幼儿园小班 K2:幼儿园中班 K3:幼儿园大班 G1-G12:1-12年级 ADULT:成人）',
+    label: '级别',
     field: 'level',
     type: 'input',
     span: 24,
     required: true,
   },
   {
-    label: '分类（CHILDREN:少儿启蒙 TEENAGER:青少年 ADULT:成人教材 COMPREHENSIVE:综合教材 READING:阅读绘本 PHONICS:自然拼读 EXAM:考试教材 GRAMMAR:语法）',
+    label: '分类',
     field: 'category',
     type: 'input',
     span: 24,
     required: true,
   },
   {
-    label: '是否前端展示（1:展示 0:不展示）',
-    field: 'isShow',
+    label: '封面图片',
+    field: 'coverImg',
     type: 'input',
     span: 24,
+    required: false,
+  },
+  {
+    label: '教材描述',
+    field: 'description',
+    type: 'textarea',
+    span: 24,
+    required: false,
+  },
+  {
+    label: '前端展示',
+    field: 'isShow',
+    type: 'radio-group',
+    span: 24,
     required: true,
+    props: {
+      options: [
+        { label: '展示', value: true },
+        { label: '不展示', value: false }
+      ]
+    }
   },
   {
     label: '排序',
     field: 'sort',
-    type: 'input',
+    type: 'input-number',
     span: 24,
     required: true,
-  },
-  {
-    label: '状态（1:启用 0:禁用）',
-    field: 'status',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '创建人',
-    field: 'createUser',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '创建时间',
-    field: 'createTime',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
+    props: {
+      min: 0,
+      max: 9999,
+      placeholder: '请输入排序值，数字越小越靠前'
+    }
+  }
 ])
 
 // 重置
