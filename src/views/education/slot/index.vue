@@ -399,7 +399,7 @@ import { listActiveTeachers } from '@/apis/education/teacher'
 import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableSlots } from '@/apis/education/slot'
 import dayjs from 'dayjs'
 import { searchMembers, getMemberCards } from '@/apis/member/index'
-import { listMaterials } from '@/apis/education/material'
+import { listMaterial } from '@/apis/education/material'
 import { createReservation } from '@/apis/education/reservation'
 
 // 选中的课程数据类型
@@ -1163,7 +1163,7 @@ const handleAddStudentReservation = () => {
 
 // 加载教材列表
 const loadMaterials = () => {
-  listMaterials()
+  listMaterial()
     .then(res => {
       if (res && res.data) {
         materials.value = res.data

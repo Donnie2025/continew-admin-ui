@@ -42,6 +42,26 @@ export interface MaterialLessonQuery {
 }
 export interface MaterialLessonPageQuery extends MaterialLessonQuery, PageQuery {}
 
+export interface MaterialLessonImportReq {
+  materialId: string
+  feishuUrl: string
+  overwrite?: boolean
+  remark?: string
+}
+
+export interface MaterialLessonImportResp {
+  totalCount: number
+  successCount: number
+  failureCount: number
+  skipCount: number
+  successLessons: string[]
+  failureLessons: Array<{
+    lessonName: string
+    reason: string
+  }>
+  skipLessons: string[]
+}
+
 /** @desc 查询课节列表 */
 export function listMaterialLesson(query: MaterialLessonPageQuery) {
   return http.get<PageRes<MaterialLessonResp[]>>(BASE_URL, query)
@@ -67,7 +87,17 @@ export function deleteMaterialLesson(id: string) {
   return http.del(BASE_URL, { ids: [id] })
 }
 
+/** @desc 批量删除课节 */
+export function batchDeleteMaterialLesson(ids: string[]) {
+  return http.del(BASE_URL, { ids })
+}
+
 /** @desc 导出课节 */
 export function exportMaterialLesson(query: MaterialLessonQuery) {
   return http.download(`${BASE_URL}/export`, query)
+}
+
+/** @desc 从飞书链接导入课节 */
+export function importMaterialLessonFromFeishu(data: MaterialLessonImportReq) {
+  return http.post<MaterialLessonImportResp>(`${BASE_URL}/import`, data)
 }
