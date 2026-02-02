@@ -127,3 +127,8 @@ export interface StudentVerifyPasswordResp {
 export function verifyStudentPassword(data: StudentVerifyPasswordReq) {
   return http.post<StudentVerifyPasswordResp>(`${BASE_URL}/verify-password`, data)
 }
+
+/** @desc 修改学生姓名并同步到ClassIn */
+export function updateStudentName(id: string, newName: string) {
+  return http.put<string>(`${BASE_URL}/${id}/name?newName=${encodeURIComponent(newName)}`)
+}

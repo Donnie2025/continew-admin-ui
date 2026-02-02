@@ -50,6 +50,23 @@
         </a-image>
         <a-avatar v-else :size="40">{{ record.name?.[0]?.toUpperCase() }}</a-avatar>
       </template>
+      <template #name="{ record }">
+        <span style="display: flex; align-items: center; gap: 8px;">
+          <span>{{ record.name }}</span>
+          <a-button 
+            v-permission="['education:student:update']"
+            type="text" 
+            size="mini" 
+            title="修改姓名" 
+            style="color: #1890ff; padding: 2px;"
+            @click="onEditName(record)"
+          >
+            <template #icon>
+              <icon-edit />
+            </template>
+          </a-button>
+        </span>
+      </template>
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:student:get']" title="详情" @click="onDetail(record)">详情</a-link>
@@ -72,6 +89,7 @@
     <StudentDetailDrawer ref="StudentDetailDrawerRef" />
     <StudentBatchImportModal ref="StudentBatchImportModalRef" @import-success="search" />
     <StudentSetPasswordModal ref="StudentSetPasswordModalRef" @save-success="search" />
+    <StudentEditNameModal ref="StudentEditNameModalRef" @save-success="search" />
   </div>
 </template>
 
@@ -81,12 +99,13 @@ import StudentAddModal from './StudentAddModal.vue'
 import StudentDetailDrawer from './StudentDetailDrawer.vue'
 import StudentBatchImportModal from './StudentBatchImportModal.vue'
 import StudentSetPasswordModal from './StudentSetPasswordModal.vue'
+import StudentEditNameModal from './StudentEditNameModal.vue'
 import { type StudentResp, type StudentQuery, deleteStudent, exportStudent, listStudent } from '@/apis/education/student'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
-import { IconEye } from '@arco-design/web-vue/es/icon'
+import { IconEye, IconEdit } from '@arco-design/web-vue/es/icon'
 
 defineOptions({ name: 'Student' })
 
@@ -171,6 +190,12 @@ const StudentSetPasswordModalRef = ref<InstanceType<typeof StudentSetPasswordMod
 // 设置密码
 const onSetPassword = (record: StudentResp) => {
   StudentSetPasswordModalRef.value?.onOpen(record.id, record.name)
+}
+
+const StudentEditNameModalRef = ref<InstanceType<typeof StudentEditNameModal>>()
+// 修改姓名
+const onEditName = (record: StudentResp) => {
+  StudentEditNameModalRef.value?.onOpen(record.id, record.name)
 }
 </script>
 

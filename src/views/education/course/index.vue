@@ -36,43 +36,61 @@
         <span v-else style="color: #999">未设置</span>
       </template>
       <template #teacherCount="{ record }">
-        <a-tooltip v-if="record.teacherCount && record.teacherCount > 0" position="right">
-          <span class="count-cell count-cell-active">{{ record.teacherCount }}</span>
-          <template #content>
-            <div class="tooltip-content">
-              <div class="tooltip-header">教师列表 ({{ record.teacherCount }})</div>
-              <div v-for="teacher in record.teachers" :key="teacher.teacherId" class="tooltip-item">
-                <a-avatar :size="24" style="margin-right: 8px">
-                  <icon-user />
-                </a-avatar>
-                <div class="tooltip-info">
-                  <div class="tooltip-name">{{ teacher.teacherName }}</div>
-                  <div class="tooltip-detail">{{ teacher.teacherPhone || teacher.teacherEmail || '-' }}</div>
-                </div>
-              </div>
+        <template v-if="record.teacherCount && record.teacherCount > 0">
+          <template v-if="record.teacherCount < 5">
+            <div class="name-list">
+              <span v-for="(teacher, index) in record.teachers" :key="teacher.teacherId" class="name-item">
+                {{ teacher.teacherName }}<span v-if="index < record.teachers.length - 1">、</span>
+              </span>
             </div>
           </template>
-        </a-tooltip>
+          <a-tooltip v-else position="right">
+            <span class="count-cell count-cell-active">{{ record.teacherCount }}</span>
+            <template #content>
+              <div class="tooltip-content">
+                <div class="tooltip-header">教师列表 ({{ record.teacherCount }})</div>
+                <div v-for="teacher in record.teachers" :key="teacher.teacherId" class="tooltip-item">
+                  <a-avatar :size="24" style="margin-right: 8px">
+                    <icon-user />
+                  </a-avatar>
+                  <div class="tooltip-info">
+                    <div class="tooltip-name">{{ teacher.teacherName }}</div>
+                    <div class="tooltip-detail">{{ teacher.teacherPhone || teacher.teacherEmail || '-' }}</div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </a-tooltip>
+        </template>
         <span v-else class="count-cell">--</span>
       </template>
       <template #studentCount="{ record }">
-        <a-tooltip v-if="record.studentCount && record.studentCount > 0" position="right">
-          <span class="count-cell count-cell-active">{{ record.studentCount }}</span>
-          <template #content>
-            <div class="tooltip-content">
-              <div class="tooltip-header">学生列表 ({{ record.studentCount }})</div>
-              <div v-for="student in record.students" :key="student.studentId" class="tooltip-item">
-                <a-avatar :size="24" style="margin-right: 8px">
-                  <icon-user />
-                </a-avatar>
-                <div class="tooltip-info">
-                  <div class="tooltip-name">{{ student.studentName }}</div>
-                  <div class="tooltip-detail">{{ student.studentPhone || student.studentEmail || '-' }}</div>
-                </div>
-              </div>
+        <template v-if="record.studentCount && record.studentCount > 0">
+          <template v-if="record.studentCount < 7">
+            <div class="name-list">
+              <span v-for="(student, index) in record.students" :key="student.studentId" class="name-item">
+                {{ student.studentName }}<span v-if="index < record.students.length - 1">、</span>
+              </span>
             </div>
           </template>
-        </a-tooltip>
+          <a-tooltip v-else position="right">
+            <span class="count-cell count-cell-active">{{ record.studentCount }}</span>
+            <template #content>
+              <div class="tooltip-content">
+                <div class="tooltip-header">学生列表 ({{ record.studentCount }})</div>
+                <div v-for="student in record.students" :key="student.studentId" class="tooltip-item">
+                  <a-avatar :size="24" style="margin-right: 8px">
+                    <icon-user />
+                  </a-avatar>
+                  <div class="tooltip-info">
+                    <div class="tooltip-name">{{ student.studentName }}</div>
+                    <div class="tooltip-detail">{{ student.studentPhone || student.studentEmail || '-' }}</div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </a-tooltip>
+        </template>
         <span v-else class="count-cell">--</span>
       </template>
       <template #action="{ record }">
@@ -135,35 +153,9 @@ const {
   tableData: dataList,
   loading,
   pagination,
-  search: originalSearch,
+  search,
   handleDelete
 } = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: false })
-
-// 重写search方法，处理教师和学生数量
-const search = async () => {
-  await originalSearch()
-  
-  // 获取班级的教师和学生数量
-  if (dataList.value && dataList.value.length > 0) {
-    for (const course of dataList.value) {
-      try {
-        // 获取教师列表
-        const teachersRes = await listCourseTeachers(course.id)
-        const teachers = Array.isArray(teachersRes) ? teachersRes : (teachersRes?.data || [])
-        course.teachers = teachers
-        course.teacherCount = teachers.length
-        
-        // 获取学生列表
-        const studentsRes = await listCourseStudents(course.id)
-        const students = Array.isArray(studentsRes) ? studentsRes : (studentsRes?.data || [])
-        course.students = students
-        course.studentCount = students.length
-      } catch (error) {
-        console.error(`获取班级[${course.id}]的教师和学生数量失败:`, error)
-      }
-    }
-  }
-}
 const columns: TableInstance['columns'] = [
   { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
   { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 120 },
@@ -318,5 +310,19 @@ const onManageLessons = (record: CourseResp) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.name-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  color: var(--color-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.name-item {
+  white-space: nowrap;
 }
 </style>

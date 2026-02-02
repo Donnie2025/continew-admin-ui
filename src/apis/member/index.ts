@@ -27,7 +27,7 @@ export function getMemberCards(memberId: number | string, teacherId?: number | s
   // 确保 teacherId 也是数字类型（如果提供）
   const teacherIdNum = teacherId ? (typeof teacherId === 'string' ? parseInt(teacherId, 10) : teacherId) : undefined;
   
-  return http.get(`/education/stuCard/available`, { 
+  return http.get(`/api/education/stuCard/available`, { 
     stuId, 
     teacherId: teacherIdNum 
   });

@@ -153,13 +153,27 @@ const loading = ref(false)
 const getDataList = async () => {
   try {
     loading.value = true
-    const { data } = await get('https://api.charles7c.top/git/orgs/events/continew')
-    data.forEach((item) => {
-      dataList.value.push({
-        ...item,
-        createTimeString: dayjs(new Date(item.createTime)).fromNow(),
-      })
-    })
+    // 暂时注释掉外部API调用，避免CORS问题
+    // const { data } = await get('https://api.charles7c.top/git/orgs/events/continew')
+    // data.forEach((item) => {
+    //   dataList.value.push({
+    //     ...item,
+    //     createTimeString: dayjs(new Date(item.createTime)).fromNow(),
+    //   })
+    // })
+    
+    // 使用模拟数据替代
+    const mockData = [
+      {
+        id: 1,
+        title: "系统更新",
+        content: "ContiNew Admin 系统已更新到最新版本",
+        createTime: new Date().toISOString(),
+        author: "System",
+        createTimeString: "刚刚"
+      }
+    ]
+    dataList.value = mockData
   } catch (err) {
     // console.log(err)
   } finally {
