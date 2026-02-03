@@ -50,6 +50,10 @@
         </a-image>
         <a-avatar v-else :size="40">{{ record.name?.[0]?.toUpperCase() }}</a-avatar>
       </template>
+      <template #enableRecording="{ record }">
+        <a-tag v-if="record.enableRecording === 1" color="green">允许录课</a-tag>
+        <a-tag v-else color="gray">不允许录课</a-tag>
+      </template>
       <template #name="{ record }">
         <span style="display: flex; align-items: center; gap: 8px;">
           <span>{{ record.name }}</span>
@@ -130,6 +134,7 @@ const columns: TableInstance['columns'] = [
   { title: '头像', dataIndex: 'avatar', slotName: 'avatar' },
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
   { title: '邮箱', dataIndex: 'email', slotName: 'email' },
+  { title: '是否允许录课', dataIndex: 'enableRecording', slotName: 'enableRecording' },
   { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime' },
   { title: '所属代理的ID', dataIndex: 'agentId', slotName: 'agentId' },
   {

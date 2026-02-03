@@ -81,6 +81,7 @@ const [form, resetForm] = useResetReactive({
   avatar: undefined,
   password: undefined,
   remark: undefined,
+  enableRecording: 0,
   agentId: undefined,
   institutionId: undefined
 })
@@ -228,6 +229,18 @@ const columns: ColumnItem[] = reactive([
     field: 'remark',
     type: 'textarea',
     span: 24,
+  },
+  {
+    label: '是否允许录课',
+    field: 'enableRecording',
+    type: 'radio',
+    span: 24,
+    props: {
+      options: [
+        { label: '不允许', value: 0 },
+        { label: '允许', value: 1 }
+      ]
+    }
   },
   {
     label: '所属代理ID',
