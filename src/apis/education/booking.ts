@@ -84,3 +84,18 @@ export function deleteBooking(id: string) {
 export function exportBooking(query: BookingQuery) {
   return http.download(`${BASE_URL}/export`, query)
 }
+
+/** @desc 取消预约 */
+export function cancelBooking(bookingId: string) {
+  return http.post(`${BASE_URL}/${bookingId}/cancel`)
+}
+
+/** @desc 教师取消预约 */
+export function cancelBookingByTeacher(bookingId: string) {
+  return http.post(`${BASE_URL}/${bookingId}/cancel-by-teacher`)
+}
+
+/** @desc 通过时间段和学生取消预约 */
+export function cancelBookingBySlotAndStudent(slotId: string, studentId: string) {
+  return http.post(`${BASE_URL}/cancel-by-slot`, { slotId, studentId })
+}

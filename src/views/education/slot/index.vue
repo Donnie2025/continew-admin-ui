@@ -159,38 +159,73 @@
             <div class="table-cell info">
               <div class="cell-title">预约信息</div>
               <div class="cell-content">
-                <!-- 如果有学生列表，显示所有学生 -->
-                <template v-if="selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0">
+                <!-- 如果有详细预约信息，显示完整信息 -->
+                <template v-if="selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0">
+                  <div v-for="(booking, index) in selectedCourse.bookingDetails" :key="index" class="booking-item">
+                    <div v-if="index > 0" class="booking-divider"></div>
+                    <strong>预约学生：</strong>{{ booking.studentName || '--' }}<br />
+                    <strong>手机号：</strong>{{ booking.studentPhone || '--' }}<br />
+                    <strong>使用会员卡：</strong>{{ booking.cardName || '--' }}<br />
+                    <strong>预约备注：</strong>{{ booking.remark || '--' }}<br />
+                    <strong>是否允许会员取消：</strong>是<br />
+                    <strong>操作人：</strong>{{ booking.operatorName || '--' }}<br />
+                    <strong>操作时间：</strong>{{ booking.operateTime || '--' }}
+                  </div>
+                </template>
+                <!-- 如果有学生列表但无详细信息，显示基本信息 -->
+                <template v-else-if="selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0">
                   <div>
                     <strong>预约学生：</strong>
                     <div v-for="(student, index) in selectedCourse.studentNameList" :key="index" class="student-item">
                       {{ student }}
                     </div>
                   </div>
+                  <strong>手机号：</strong>--<br />
+                  <strong>使用会员卡：</strong>--<br />
+                  <strong>预约备注：</strong>--<br />
+                  <strong>是否允许会员取消：</strong>是<br />
+                  <strong>操作人：</strong>--<br />
+                  <strong>操作时间：</strong>--
                 </template>
-                <!-- 否则显示单个学生 -->
+                <!-- 否则显示单个学生的基本信息 -->
                 <template v-else>
-                会员：{{ selectedCourse.studentName }}<br />
+                  <strong>会员：</strong>{{ selectedCourse.studentName }}<br />
+                  <strong>手机号：</strong>--<br />
+                  <strong>使用会员卡：</strong>--<br />
+                  <strong>预约备注：</strong>--<br />
+                  <strong>是否允许会员取消：</strong>是<br />
+                  <strong>操作人：</strong>--<br />
+                  <strong>操作时间：</strong>--
                 </template>
-                手机号：--<br />
-                使用会员卡：--<br />
-                预约备注：--<br />
-                是否允许会员取消：是<br />
-                操作人：--<br />
-                操作时间：--
               </div>
             </div>
             <div class="table-cell material">
               <div class="cell-title">教材</div>
               <div class="cell-content">
-                暂无教材信息
+                <template v-if="selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0">
+                  <div v-for="(booking, index) in selectedCourse.bookingDetails" :key="index" class="material-item">
+                    <div v-if="index > 0" class="material-divider"></div>
+                    <template v-if="booking.materialName">
+                      <strong>教材名称：</strong>{{ booking.materialName }}<br />
+                      <strong>教材编码：</strong>{{ booking.materialCode || '--' }}<br />
+                      <strong>教材级别：</strong>{{ booking.materialLevel || '--' }}<br />
+                      <strong>课节名称：</strong>{{ booking.lessonName || '--' }}
+                    </template>
+                    <template v-else>
+                      暂无教材信息
+                    </template>
+                  </div>
+                </template>
+                <template v-else>
+                  暂无教材信息
+                </template>
               </div>
             </div>
             <div class="table-cell action">
               <div class="cell-title">操作</div>
               <div class="cell-content">
                 <a class="table-link">修改</a>
-                <a class="table-link" style="margin-left: 16px;">取消预约</a>
+                <a class="table-link" style="margin-left: 16px;" @click="handleCancelBooking">取消预约</a>
               </div>
             </div>
           </div>
@@ -401,6 +436,7 @@ import dayjs from 'dayjs'
 import { searchMembers, getMemberCards } from '@/apis/member/index'
 import { listMaterial } from '@/apis/education/material'
 import { createReservation } from '@/apis/education/reservation'
+import { cancelBookingBySlotAndStudent } from '@/apis/education/booking'
 
 // 选中的课程数据类型
 interface CourseItem {
@@ -717,8 +753,8 @@ const handleCourseClick = (timeSlot: string, dayIndex: number) => {
 }
 
 // 打开预约界面
-const openReservationModal = (slot: CourseItem, dayIndex: number, dateStr: string) => {
-  // 设置要显示的课程详情
+const openReservationModal = async (slot: CourseItem, dayIndex: number, dateStr: string) => {
+  // 先设置基本信息并打开弹窗
   selectedCourse.value = {
     ...slot,
     dateStr: dateStr // 添加格式化的日期字符串用于显示
@@ -726,6 +762,25 @@ const openReservationModal = (slot: CourseItem, dayIndex: number, dateStr: strin
   
   // 更新课程详情弹窗标题和内容
   courseDetailVisible.value = true;
+  
+  // 如果有课程ID，则获取详细信息包含预约数据
+  if (slot.id) {
+    try {
+      const { data } = await getSlot(slot.id);
+      // 更新选中课程的详细信息
+      selectedCourse.value = {
+        ...selectedCourse.value,
+        ...data,
+        dateStr: dateStr,
+        // 确保保留原有的基础信息
+        studentName: slot.studentName,
+        studentNameList: slot.studentNameList
+      };
+    } catch (error) {
+      console.error('获取课程详细信息失败:', error);
+      Message.error('获取课程详细信息失败');
+    }
+  }
 }
 
 // 获取状态颜色
@@ -758,6 +813,43 @@ const handleModalOk = () => {
 const handleModalCancel = () => {
   courseDetailVisible.value = false
   selectedCourse.value = null
+}
+
+// 处理取消预约
+const handleCancelBooking = async () => {
+  if (!selectedCourse.value || !selectedCourse.value.bookingDetails || selectedCourse.value.bookingDetails.length === 0) {
+    Message.error('没有找到预约信息');
+    return;
+  }
+
+  // 显示确认对话框
+  Modal.confirm({
+    title: '确认取消预约',
+    content: '确定要取消这个预约吗？取消后将无法恢复。',
+    okText: '确认取消',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const booking = selectedCourse.value.bookingDetails[0]; // 取第一个预约记录
+        
+        // 调用取消预约API
+        await cancelBookingBySlotAndStudent(selectedCourse.value.id, booking.studentId.toString());
+        
+        Message.success('预约取消成功');
+        
+        // 关闭弹窗
+        courseDetailVisible.value = false;
+        selectedCourse.value = null;
+        
+        // 重新加载课程数据
+        loadCourseData();
+        
+      } catch (error) {
+        console.error('取消预约失败:', error);
+        Message.error('取消预约失败，请稍后重试');
+      }
+    }
+  });
 }
 
 // 添加/编辑课程相关
@@ -2092,6 +2184,28 @@ const handleDeleteCourse = () => {
   border-radius: 4px;
   display: inline-block;
   margin-right: 8px;
+}
+
+.booking-item {
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.booking-divider, .material-divider {
+  height: 1px;
+  background-color: #e5e6eb;
+  margin: 12px 0;
+}
+
+.material-item {
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
   font-size: 13px;
 }
 </style>
