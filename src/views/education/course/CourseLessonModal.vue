@@ -56,6 +56,7 @@
             </div>
             <div class="table-cell index-cell">序号</div>
             <div class="table-cell name-cell">课节名称</div>
+            <div class="table-cell agent-cell">代理机构</div>
             <div class="table-cell time-cell">上课时间</div>
             <div class="table-cell duration-cell">时长</div>
             <div class="table-cell seat-cell">1对几</div>
@@ -77,6 +78,7 @@
               </div>
               <div class="table-cell index-cell">{{ index + 1 }}</div>
               <div class="table-cell name-cell" :title="lesson.name">{{ lesson.name }}</div>
+              <div class="table-cell agent-cell">{{ lesson.agentCode || '-' }}</div>
               <div class="table-cell time-cell">{{ formatDateTime(lesson.startTime) }}</div>
               <div class="table-cell duration-cell">{{ formatDuration(lesson.duration) }}</div>
               <div class="table-cell seat-cell">1对{{ typeof lesson.seatNum === 'string' ? parseInt(lesson.seatNum) : lesson.seatNum }}</div>
@@ -257,6 +259,51 @@
             <template #unchecked>否</template>
           </a-switch>
         </a-form-item>
+
+        <a-form-item label="代理机构（可选）">
+          <a-select
+            v-model="lessonForm.agentCode"
+            placeholder="请选择代理机构"
+            allow-clear
+            allow-search
+          >
+            <a-option v-for="inst in institutionList" :key="inst.code" :value="inst.code">
+              {{ inst.name }}（{{ inst.code }}）
+            </a-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item label="选择课件（可选）">
+          <a-select 
+            v-model="lessonForm.materialId" 
+            placeholder="请选择教材"
+            allow-clear
+            allow-search
+            @change="handleMaterialChange"
+          >
+            <a-option v-for="material in materials" :key="material.id" :value="material.id">
+              {{ material.name }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item v-if="lessonForm.materialId" label="选择教材课节">
+          <a-select 
+            v-model="lessonForm.materialLessonId" 
+            placeholder="请选择教材课节"
+            :loading="materialLessonsLoading"
+            allow-clear
+            allow-search
+            @change="handleMaterialLessonChange"
+          >
+            <a-option v-for="lesson in materialLessons" :key="lesson.id" :value="lesson.id">
+              {{ lesson.lessonName }}
+            </a-option>
+          </a-select>
+          <template v-if="lessonForm.lessonUrl" #extra>
+            <a-link :href="lessonForm.lessonUrl" target="_blank">{{ lessonForm.lessonUrl }}</a-link>
+          </template>
+        </a-form-item>
       </a-form>
     </a-modal>
   </a-modal>
@@ -274,14 +321,19 @@ import {
 } from '@/apis/education/lesson'
 import { searchTeachers, type TeacherResp } from '@/apis/education/teacher'
 import { getCourse, listCourseTeachers, type CourseTeacherResp } from '@/apis/education/course'
+import { listAgentOptions, type AgentOption } from '@/apis/education/agent'
+import { listAllMaterials, type MaterialResp } from '@/apis/education/material'
+import { listMaterialLessonsByMaterialId, type MaterialLessonResp } from '@/apis/education/materialLesson'
 
 const visible = ref(false)
 const loading = ref(false)
 const formVisible = ref(false)
 const teacherLoading = ref(false)
+const materialLessonsLoading = ref(false)
 const courseId = ref('')
 const courseName = ref('')
 const courseUid = ref('')
+const courseAgentCode = ref('') // 课程的代理机构代码
 const searchKeyword = ref('')
 const isEdit = ref(false)
 const isBatchMode = ref(false) // 是否为批量创建模式
@@ -292,6 +344,13 @@ const lessonFormRef = ref()
 
 // 教师搜索
 const teacherOptions = ref<{ label: string; value: string; id: number | string }[]>([])
+
+// 代理机构列表
+const institutionList = ref<AgentOption[]>([])
+
+// 教材和课件
+const materials = ref<MaterialResp[]>([])
+const materialLessons = ref<MaterialLessonResp[]>([])
 
 // 选中状态
 const selectedLessonIds = ref<string[]>([])
@@ -318,9 +377,13 @@ const lessonForm = ref({
   teacherId: '',
   teacherName: '', // 用于显示教师名字
   recordState: 0,
+  agentCode: '', // 代理机构
   lessonCount: 1, // 课堂数量（批量创建用）
   weeklySchedule: [] as number[], // 每周规律：0-6表示周日到周六
-  startNumber: 1 // 批量创建时的起始编号
+  startNumber: 1, // 批量创建时的起始编号
+  materialId: '', // 教材ID
+  materialLessonId: '', // 教材课节ID
+  lessonUrl: '' // 课节链接（自动填充）
 })
 
 // 过滤后的课节列表
@@ -449,6 +512,55 @@ const handleClearTeacher = () => {
   teacherOptions.value = []
 }
 
+// 加载教材列表
+const loadMaterials = async () => {
+  try {
+    const response = await listAllMaterials()
+    materials.value = Array.isArray(response.data) ? response.data : []
+  } catch (error) {
+    console.error('加载教材列表失败:', error)
+    materials.value = []
+  }
+}
+
+// 处理教材选择
+const handleMaterialChange = async (materialId: string) => {
+  // 清空之前选择的课节和链接
+  lessonForm.value.materialLessonId = ''
+  lessonForm.value.lessonUrl = ''
+  materialLessons.value = []
+  
+  if (!materialId) {
+    return
+  }
+  
+  // 加载该教材的课节列表
+  materialLessonsLoading.value = true
+  try {
+    const response = await listMaterialLessonsByMaterialId(materialId)
+    materialLessons.value = Array.isArray(response.data) ? response.data : []
+  } catch (error) {
+    console.error('加载教材课节列表失败:', error)
+    materialLessons.value = []
+  } finally {
+    materialLessonsLoading.value = false
+  }
+}
+
+// 处理教材课节选择
+const handleMaterialLessonChange = (materialLessonId: string) => {
+  if (!materialLessonId) {
+    lessonForm.value.lessonUrl = ''
+    return
+  }
+  
+  // 找到选中的课节，自动填充链接
+  const selectedLesson = materialLessons.value.find(lesson => lesson.id === materialLessonId)
+  if (selectedLesson) {
+    lessonForm.value.lessonUrl = selectedLesson.lessonUrl || ''
+  }
+}
+
 // 打开弹窗
 const onOpen = async (id: string, name: string) => {
   courseId.value = id
@@ -456,6 +568,15 @@ const onOpen = async (id: string, name: string) => {
   visible.value = true
   searchKeyword.value = ''
   
+  // 加载机构列表
+  if (institutionList.value.length === 0) {
+    try {
+      const res = await listAgentOptions()
+      institutionList.value = Array.isArray(res.data) ? res.data : []
+    } catch {}
+  }
+  // 加载教材列表
+  await loadMaterials()
   // 加载班级信息以获取courseUid
   await loadCourseInfo()
   // 加载课节列表
@@ -467,6 +588,7 @@ const loadCourseInfo = async () => {
   try {
     const { data } = await getCourse(courseId.value)
     courseUid.value = data.courseUid || ''
+    courseAgentCode.value = data.agentCode || '' // 保存课程的代理机构代码
   } catch (error) {
     console.error('加载班级信息失败:', error)
   }
@@ -520,11 +642,16 @@ const onAddLesson = async () => {
     teacherId: '',
     teacherName: '',
     recordState: 0,
+    agentCode: '',
     lessonCount: 1, // 默认1节课
     weeklySchedule: [], // 清空每周规律
-    startNumber: 1 // 单个创建时不使用，设置默认值
+    startNumber: 1, // 单个创建时不使用，设置默认值
+    materialId: '',
+    materialLessonId: '',
+    lessonUrl: ''
   }
   teacherOptions.value = []
+  materialLessons.value = []
   
   // 获取课程关联的老师列表，并默认选中第一个老师
   try {
@@ -553,7 +680,7 @@ const onBatchAddLesson = async () => {
   isEdit.value = false
   isBatchMode.value = true // 批量创建模式
   editingLessonId.value = ''
-  
+
   // 计算默认上课时间：下一个小时的整点
   const now = new Date()
   const nextHour = new Date(now)
@@ -561,7 +688,7 @@ const onBatchAddLesson = async () => {
   nextHour.setMinutes(0)
   nextHour.setSeconds(0)
   nextHour.setMilliseconds(0)
-  
+
   // 格式化为 YYYY-MM-DD HH:mm:ss
   const formatDefaultTime = (date: Date) => {
     const year = date.getFullYear()
@@ -572,7 +699,7 @@ const onBatchAddLesson = async () => {
     const seconds = String(date.getSeconds()).padStart(2, '0')
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
   }
-  
+
   // 计算起始编号：获取最大编号 + 1
   let maxNumber = 0
   try {
@@ -592,22 +719,31 @@ const onBatchAddLesson = async () => {
   } catch (error) {
     console.error('计算起始编号失败:', error)
   }
-  
+
+  // 根据 agentCode 设置默认值
+  const isLizheAgent = courseAgentCode.value === 'lizhe'
+
   lessonForm.value = {
     name: courseName.value, // 默认填充班级名称
     startTime: formatDefaultTime(nextHour),
-    durationHours: 0,
-    durationMinutes: 25,
-    seatNum: 1,
+    durationHours: isLizheAgent ? 3 : 0, // lizhe 代理默认3小时
+    durationMinutes: isLizheAgent ? 0 : 25, // lizhe 代理默认0分钟（整3小时）
+    seatNum: isLizheAgent ? 12 : 1, // lizhe 代理默认1对12
     teacherId: '',
     teacherName: '',
-    recordState: 0,
-    lessonCount: 10, // 批量创建默认10节课
+    recordState: isLizheAgent ? 1 : 0, // lizhe 代理默认录制
+    agentCode: courseAgentCode.value || '', // 填充课程的代理机构代码
+    lessonCount: 1, // 批量创建默认1节课
     weeklySchedule: [], // 清空每周规律
-    startNumber: maxNumber + 1 // 起始编号为最大编号+1
+    startNumber: maxNumber + 1, // 起始编号为最大编号+1
+    materialId: '',
+    materialLessonId: '',
+    lessonUrl: ''
   }
+
   teacherOptions.value = []
-  
+  materialLessons.value = []
+
   // 获取课程关联的老师列表，并默认选中第一个老师
   try {
     const response = await listCourseTeachers(courseId.value)
@@ -626,7 +762,7 @@ const onBatchAddLesson = async () => {
   } catch (error) {
     console.error('获取课程老师列表失败:', error)
   }
-  
+
   formVisible.value = true
 }
 
@@ -650,6 +786,10 @@ const onEditLesson = (lesson: LessonResp) => {
     teacherId: lesson.teacherId || '',
     teacherName: lesson.teacherName || '', // 填充教师名字
     recordState: typeof lesson.recordState === 'string' ? parseInt(lesson.recordState) : (lesson.recordState || 0),
+    agentCode: lesson.agentCode || '',
+    materialId: lesson.materialId || '',
+    materialLessonId: '',
+    lessonUrl: '',
     lessonCount: 1, // 编辑时不支持批量
     weeklySchedule: [], // 编辑时不使用
     startNumber: 1 // 编辑时不使用，设置默认值
@@ -718,6 +858,8 @@ const handleSaveLesson = async () => {
         duration: totalMinutes,
         seatNum: lessonForm.value.seatNum,
         recordState: lessonForm.value.recordState,
+        agentCode: lessonForm.value.agentCode || undefined,
+        materialId: lessonForm.value.materialId || undefined,
         liveState: 0,
         openState: 0
       }
@@ -740,6 +882,8 @@ const handleSaveLesson = async () => {
           duration: totalMinutes,
           seatNum: lessonForm.value.seatNum,
           recordState: lessonForm.value.recordState,
+          agentCode: lessonForm.value.agentCode || undefined,
+          materialId: lessonForm.value.materialId || undefined,
           liveState: 0,
           openState: 0
         }
@@ -780,6 +924,8 @@ const handleSaveLesson = async () => {
             duration: totalMinutes,
             seatNum: lessonForm.value.seatNum,
             recordState: lessonForm.value.recordState,
+            agentCode: lessonForm.value.agentCode || undefined,
+            materialId: lessonForm.value.materialId || undefined,
             liveState: 0,
             openState: 0
           }
@@ -986,22 +1132,32 @@ defineExpose({
 .index-cell {
   width: 60px;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .name-cell {
-  flex: 1;
+  flex: 0.8;
   min-width: 150px;
   font-weight: 500;
+  text-align: center;
+}
+
+.agent-cell {
+  width: 100px;
+  flex-shrink: 0;
+  text-align: center;
 }
 
 .time-cell {
   width: 150px;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .duration-cell {
   width: 100px;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .seat-cell {
@@ -1013,6 +1169,7 @@ defineExpose({
 .teacher-cell {
   width: 100px;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .record-cell {

@@ -1,5 +1,5 @@
 <template>
-  <a-card class="general-card" title="我的项目">
+  <!-- <a-card class="general-card" title="我的项目">
     <template #extra>
       <a-dropdown>
         <a-link>更多</a-link>
@@ -68,7 +68,7 @@
         </a-card>
       </a-col>
     </a-row>
-  </a-card>
+  </a-card> -->
 </template>
 
 <script setup lang="ts">

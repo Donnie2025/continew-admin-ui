@@ -162,6 +162,7 @@ const columns: TableInstance['columns'] = [
   { title: '性别', dataIndex: 'gender', slotName: 'gender', align: 'center' },
   { title: '所属部门', dataIndex: 'deptName', minWidth: 180, ellipsis: true, tooltip: true },
   { title: '角色', dataIndex: 'roleNames', slotName: 'roleNames', minWidth: 165 },
+  { title: '机构编码', dataIndex: 'agentCode', width: 130, ellipsis: true, tooltip: true },
   { title: '手机号', dataIndex: 'phone', minWidth: 170, ellipsis: true, tooltip: true },
   { title: '邮箱', dataIndex: 'email', minWidth: 170, ellipsis: true, tooltip: true },
   { title: '系统内置', dataIndex: 'isSystem', slotName: 'isSystem', width: 100, align: 'center', show: false },

@@ -9,7 +9,7 @@ NC='\033[0m' # No Color
 
 # 项目配置
 PROJECT_NAME="continew-admin-ui"
-SERVER_ALIAS="huawei"
+SERVER_ALIAS="tx"
 SERVER_DEPLOY_PATH="/www/wwwroot/${PROJECT_NAME}"
 TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
 PACKAGE_NAME="${PROJECT_NAME}-source-${TIMESTAMP}.tar.gz"
@@ -47,6 +47,7 @@ tar -czf $PACKAGE_NAME \
     --exclude=.nyc_output \
     --exclude=.vscode \
     --exclude=.idea \
+    --exclude=deployment \
     .
 
 if [ $? -eq 0 ]; then

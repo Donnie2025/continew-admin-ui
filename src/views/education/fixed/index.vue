@@ -95,7 +95,7 @@
                         </div>
                       </div>
                     </div>
-                    <div class="course-actions">
+                    <div v-if="getFixedCourse(day.value, timeSlot)!.bookedCount > 0" class="course-actions">
                       <a-link @click.stop="onEdit(getFixedCourse(day.value, timeSlot)!)">编辑</a-link>
                       <a-link status="danger" @click.stop="onDelete(getFixedCourse(day.value, timeSlot)!)">删除</a-link>
                     </div>
@@ -185,12 +185,17 @@ const loadTeachers = async () => {
     teacherLoading.value = true
     const res = await listTeacher({
       name: teacherSearchKeyword.value,
+      isShow: 1,
+      isFixed: 1,
       page: 1,
       size: 100
     })
     console.log('Teacher API Response:', res)
     teacherList.value = res.data?.list || res.list || []
     console.log('Teacher List:', teacherList.value)
+    if (!selectedTeacherId.value && teacherList.value.length > 0) {
+      selectTeacher(teacherList.value[0])
+    }
   } catch (error) {
     console.error('Load teachers error:', error)
     Message.error('加载教师列表失败')
@@ -555,13 +560,7 @@ const onExport = () => {
           .course-actions {
             display: flex;
             gap: 8px;
-            opacity: 0;
-            transition: opacity 0.2s;
           }
-        }
-
-        &.has-course:hover .course-actions {
-          opacity: 1;
         }
       }
     }

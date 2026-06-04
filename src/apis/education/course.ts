@@ -12,6 +12,7 @@ export interface CourseResp {
   courseSettingId: string
   institutionId: string
   institutionName?: string
+  agentCode?: string
   createTime: string
   createUserString: string
   updateUserString: string
@@ -31,6 +32,7 @@ export interface CourseDetailResp {
   courseSettingId: string
   status: string
   institutionId: string
+  agentCode?: string
   createTime: string
   updateTime: string
   createUser: string
@@ -76,6 +78,7 @@ export interface CourseStudentReq {
 }
 export interface CourseQuery {
   name: string | undefined
+  agentCode: string | undefined
   mainTeacherId: string | undefined
   institutionId: string | undefined
   sort: Array<string>

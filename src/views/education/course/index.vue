@@ -14,8 +14,10 @@
     >
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.name" placeholder="请输入教室名称" allow-clear @search="search" />
+	    <a-select v-model="queryForm.agentCode" placeholder="请选择代理机构" allow-clear style="width: 180px" @change="search">
+	      <a-option v-for="item in agentOptions" :key="item.code" :value="item.code">{{ item.name }}</a-option>
+	    </a-select>
 	    <a-input-search v-model="queryForm.mainTeacherId" placeholder="请输入班主任ID" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.institutionId" placeholder="请输入所属机构ID" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -118,6 +120,7 @@
     <CourseTeacherModal ref="CourseTeacherModalRef" @save-success="search" />
     <CourseStudentModal ref="CourseStudentModalRef" @save-success="search" />
     <CourseLessonModal ref="CourseLessonModalRef" @save-success="search" />
+
   </div>
 </template>
 
@@ -129,6 +132,7 @@ import CourseTeacherModal from './CourseTeacherModal.vue'
 import CourseStudentModal from './CourseStudentModal.vue'
 import CourseLessonModal from './CourseLessonModal.vue'
 import { type CourseResp, type CourseQuery, deleteCourse, exportCourse, listCourse, listCourseTeachers, listCourseStudents } from '@/apis/education/course'
+import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
@@ -136,14 +140,18 @@ import has from '@/utils/has'
 
 defineOptions({ name: 'Course' })
 
+const agentOptions = ref<AgentOption[]>([])
+
 // 在组件挂载时调用search方法
 onMounted(() => {
+  listAgentOptions().then(res => { agentOptions.value = res.data || [] })
   search()
 })
 
 
 const queryForm = reactive<CourseQuery>({
   name: undefined,
+  agentCode: undefined,
   mainTeacherId: undefined,
   institutionId: undefined,
   sort: ['id,desc']
@@ -157,17 +165,17 @@ const {
   handleDelete
 } = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: false })
 const columns: TableInstance['columns'] = [
-  { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
-  { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 120 },
-  { title: '所属机构', dataIndex: 'institutionName', slotName: 'institutionName', width: 150 },
-  { title: '教师', dataIndex: 'teacherCount', slotName: 'teacherCount', width: 80, align: 'center' },
-  { title: '班级学生', dataIndex: 'studentCount', slotName: 'studentCount', width: 80, align: 'center' },
-  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime', width: 180 },
+  { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200, align: 'center' },
+  { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 80,align: 'center' },
+  // { title: '所属机构', dataIndex: 'institutionName', slotName: 'institutionName', width: 80,align: 'center' },
+  { title: '教师', dataIndex: 'teacherCount', slotName: 'teacherCount', width: 100 },
+  { title: '班级学生', dataIndex: 'studentCount', slotName: 'studentCount', width: 180},
+  { title: '备注', dataIndex: 'remark', slotName: 'remark', width: 100 ,ellipsis: true, tooltip: true},
   {
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 400,
+    width: 300,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
     show: has.hasPermOr(['education:course:get', 'education:course:update', 'education:course:delete'])
@@ -177,6 +185,7 @@ const columns: TableInstance['columns'] = [
 // 重置
 const reset = () => {
   queryForm.name = undefined
+  queryForm.agentCode = undefined
   queryForm.mainTeacherId = undefined
   queryForm.institutionId = undefined
   search()
@@ -229,6 +238,7 @@ const CourseLessonModalRef = ref<InstanceType<typeof CourseLessonModal>>()
 const onManageLessons = (record: CourseResp) => {
   CourseLessonModalRef.value?.onOpen(record.id, record.name)
 }
+
 </script>
 
 <style scoped lang="scss">

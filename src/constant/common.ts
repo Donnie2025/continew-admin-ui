@@ -8,6 +8,6 @@ export const DisEnableStatusList: LabelValueItem[] = [
 
 /** @desc 性别 */
 export const GenderList: LabelValueItem[] = [
-  { label: '男', value: 'male' },
-  { label: '女', value: 'female' }
+  { label: '男', value: 1 },
+  { label: '女', value: 2 }
 ]

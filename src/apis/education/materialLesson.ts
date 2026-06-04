@@ -101,3 +101,14 @@ export function exportMaterialLesson(query: MaterialLessonQuery) {
 export function importMaterialLessonFromFeishu(data: MaterialLessonImportReq) {
   return http.post<MaterialLessonImportResp>(`${BASE_URL}/import`, data)
 }
+
+/** @desc 根据教材ID获取课节列表 */
+export function listMaterialLessonsByMaterialId(materialId: string) {
+  return http.get<MaterialLessonResp[]>(BASE_URL, { 
+    materialId, 
+    page: 1, 
+    size: 1000,
+    status: 1,
+    sort: ['createTime,asc']
+  })
+}

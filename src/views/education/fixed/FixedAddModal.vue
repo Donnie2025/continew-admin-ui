@@ -22,7 +22,13 @@
         </a-select>
       </a-form-item>
       
-      <a-form-item label="星期" field="weekDays" required>
+      <a-form-item field="weekDays" required>
+        <template #label>
+          <div class="section-header">
+            <span class="section-title">星期</span>
+            <a-checkbox v-model="weekdayAllSelected" @change="toggleWeekdayAll">全选</a-checkbox>
+          </div>
+        </template>
         <a-checkbox-group v-model="form.weekDays" direction="horizontal">
           <a-checkbox :value="1">周一</a-checkbox>
           <a-checkbox :value="2">周二</a-checkbox>
@@ -110,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import type { FormInstance } from '@arco-design/web-vue'
 import { Message } from '@arco-design/web-vue'
 import { getFixed, checkTimeConflict, batchAddFixed, listFixedByTeacherId } from '@/apis/education/fixed'
@@ -148,9 +154,16 @@ const afternoonTimes = ['12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '1
 const eveningTimes = ['18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30']
 
 // 全选状态
+const allWeekDays = [1, 2, 3, 4, 5, 6, 7]
+const weekdayAllSelected = ref(false)
 const morningAllSelected = ref(false)
 const afternoonAllSelected = ref(false)
 const eveningAllSelected = ref(false)
+
+// 星期全选切换
+const toggleWeekdayAll = (checked: boolean) => {
+  form.weekDays = checked ? [...allWeekDays] : []
+}
 
 // 全选切换
 const toggleMorningAll = (checked: boolean) => {
@@ -182,6 +195,7 @@ const toggleEveningAll = (checked: boolean) => {
 
 // 更新全选状态
 const updateSelectAllStatus = () => {
+  weekdayAllSelected.value = allWeekDays.every(d => form.weekDays.includes(d))
   morningAllSelected.value = morningTimes.every(t => form.startTimes.includes(t))
   afternoonAllSelected.value = afternoonTimes.every(t => form.startTimes.includes(t))
   eveningAllSelected.value = eveningTimes.every(t => form.startTimes.includes(t))
@@ -189,6 +203,7 @@ const updateSelectAllStatus = () => {
 
 // 监听星期选择变化，自动选择对应的时间
 watch(() => form.weekDays, (newWeekDays) => {
+  weekdayAllSelected.value = allWeekDays.every(d => newWeekDays.includes(d))
   if (!teacherFixedList.value || teacherFixedList.value.length === 0) {
     return
   }
@@ -417,22 +432,23 @@ defineExpose({ onAdd, onUpdate })
   gap: 24px;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+  width: 100%;
+
+  .section-title {
+    font-size: 14px;
+    color: var(--color-text-1);
+  }
+}
+
 .time-section {
   display: block;
   width: 100%;
-  
-  .section-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-    gap: 8px;
-    width: 100%;
-    
-    .section-title {
-      font-size: 14px;
-      color: var(--color-text-1);
-    }
-  }
   
   .time-checkbox-group {
     display: grid;

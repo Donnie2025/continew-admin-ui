@@ -44,36 +44,10 @@ const courseLoading = ref(false)
 const teacherOptions = ref<{ label: string; value: string | number }[]>([])
 const teacherLoading = ref(false)
 
-// 获取课程列表
-const fetchCourseOptions = async (keyword = '') => {
-  courseLoading.value = true
-  try {
-    const { data } = await listCourse({
-      name: keyword || undefined,
-      mainTeacherId: undefined,
-      institutionId: undefined,
-      sort: [],
-      page: 1,
-      size: 50
-    })
-    
-    // 检查响应数据结构
-    const records = data.list || []
-    courseOptions.value = records.map(item => {
-      // CourseResp类型中可能没有id字段，这里做一个安全处理
-      const id = (item as any).id || ''
-      return {
-        label: item.name,
-        value: id,
-        courseUid: item.courseUid || ''
-      }
-    })
-  } catch (error) {
-    console.error('获取课程列表失败', error)
-  } finally {
-    courseLoading.value = false
-  }
-}
+// 课程选项加载（已移除，课堂管理页面只读）
+// const fetchCourseOptions = () => {
+//   // 课堂管理页面只有修改功能，课程字段只读，无需加载选项
+// }
 
 // 获取教师列表
 const fetchTeacherOptions = async (keyword = '') => {
@@ -94,23 +68,16 @@ const fetchTeacherOptions = async (keyword = '') => {
   }
 }
 
-// 处理课程搜索关键词变化
-const handleCourseSearchChange = useDebounceFn((keyword: string) => {
-  fetchCourseOptions(keyword)
-}, 300)
+// 课程搜索处理（课堂管理页面不使用）
+const handleCourseSearchChange = () => {
+  // 课堂管理页面课程字段只读，不需要搜索功能
+}
 
 // 处理教师搜索关键词变化
 const handleTeacherSearchChange = useDebounceFn((keyword: string) => {
   fetchTeacherOptions(keyword)
 }, 300)
 
-// 课程选择变更时自动填充ClassIn课程ID
-const handleCourseChange = (value: string | number) => {
-  const selectedCourse = courseOptions.value.find(item => item.value === value)
-  if (selectedCourse && selectedCourse.courseUid) {
-    form.courseUid = selectedCourse.courseUid.toString()
-  }
-}
 
 // 教师选择变更时自动填充teacherId
 const handleTeacherChange = (value: string | number) => {
@@ -120,7 +87,7 @@ const handleTeacherChange = (value: string | number) => {
 
 // 上台人数选项
 const seatNumOptions = Array.from({ length: 12 }, (_, index) => {
-  const value = index + 2 // 从2开始，对应1V1
+  const value = index + 1
   return {
     label: `1V${index + 1}`,
     value
@@ -129,38 +96,19 @@ const seatNumOptions = Array.from({ length: 12 }, (_, index) => {
 
 const [form, resetForm] = useResetReactive({
   courseId: '',
+  courseName: '', // 用于编辑模式下显示课程名称
   courseUid: '',
   name: '',
   teacherId: '',
   startTime: null,
   duration: 25,
-  seatNum: 2, // 默认1V1，值为2
+  seatNum: 6,
   recordState: 0,
-  liveState: 0,
-  openState: 0
+  remark: ''
 })
 
 const columns: ColumnItem[] = reactive([
-  {
-    label: '课程',
-    field: 'courseId',
-    type: 'select',
-    span: 24,
-    required: true,
-    props: {
-      allowSearch: true,
-      allowClear: true,
-      loading: courseLoading,
-      options: courseOptions,
-      placeholder: '请输入课程名称搜索',
-      filterOption: false,
-      showSearch: true,
-      defaultActiveFirstOption: false,
-      notFoundContent: courseLoading.value ? '加载中...' : '未找到匹配课程',
-      onSearch: handleCourseSearchChange,
-      onChange: handleCourseChange
-    }
-  },
+  
   // ClassIn课程ID作为隐藏字段，不在表单中显示但会提交到后端
   {
     field: 'courseUid',
@@ -201,10 +149,7 @@ const columns: ColumnItem[] = reactive([
     span: 24,
     required: true,
     props: {
-      showTime: {
-        format: 'HH:mm',
-        defaultValue: '00:00'
-      },
+      showTime: true,
       format: 'YYYY-MM-DD HH:mm',
       placeholder: '请选择活动开始时间'
     }
@@ -240,25 +185,22 @@ const columns: ColumnItem[] = reactive([
     type: 'radio-group',
     span: 24,
     props: {
-      options: yes_no,
+      options: [
+        { label: '否', value: 0 },
+        { label: '是', value: 1 }
+      ]
     },
   },
   {
-    label: '直播状态',
-    field: 'liveState',
-    type: 'radio-group',
+    label: '备注',
+    field: 'remark',
+    type: 'textarea',
     span: 24,
     props: {
-      options: yes_no,
-    },
-  },
-  {
-    label: '公开状态',
-    field: 'openState',
-    type: 'radio-group',
-    span: 24,
-    props: {
-      options: yes_no,
+      placeholder: '请输入备注信息',
+      maxLength: 500,
+      showWordLimit: true,
+      autoSize: { minRows: 3, maxRows: 6 }
     },
   },
 ])
@@ -267,8 +209,7 @@ const columns: ColumnItem[] = reactive([
 const reset = () => {
   formRef.value?.formRef?.resetFields()
   resetForm()
-  // 重置后加载课程列表和教师列表
-  fetchCourseOptions()
+  // 课堂管理页面只有修改功能，不需要加载课程选项
   fetchTeacherOptions()
 }
 
@@ -333,11 +274,10 @@ const save = async () => {
   }
 }
 
-// 新增
+// 新增（课堂管理页面不使用此功能）
 const onAdd = async () => {
-  reset()
-  dataId.value = ''
-  visible.value = true
+  // 课堂管理页面只有修改功能，不使用新增
+  console.warn('课堂管理页面不支持新增功能')
 }
 
 // 修改
@@ -361,22 +301,15 @@ const onUpdate = async (id: string) => {
   
   Object.assign(form, lessonData)
   
-  // 如果有课程ID，加载该课程信息到下拉框
-  if (lessonData.courseId) {
-    await fetchCourseOptions()
-  }
+  // 编辑模式下课程字段只读，无需加载课程选项
   
-  // 如果有教师ID，加载该教师信息到下拉框
-  if (lessonData.teacherId) {
-    await fetchTeacherOptions()
-  }
+  // 教师选项在组件初始化时已加载，无需重复加载
   
   visible.value = true
 }
 
-// 初始化时加载课程列表和教师列表
+// 初始化时只加载教师列表，课程列表按需加载
 onMounted(() => {
-  fetchCourseOptions()
   fetchTeacherOptions()
 })
 

@@ -16,11 +16,12 @@
           <span class="section-title">学生 ({{ availableStudents.length }})</span>
           <a-input-search
             v-model="searchKeyword"
-            placeholder="姓名/手机号/邮箱"
+            placeholder="姓名/手机号"
             allow-clear
             style="width: 240px"
             @search="loadStudents"
             @clear="loadStudents"
+            @keydown.enter="loadStudents"
           />
         </div>
         <a-spin :loading="studentLoading" style="width: 100%">
@@ -34,7 +35,7 @@
                 />
               </div>
               <div class="table-cell name-cell">姓名</div>
-              <div class="table-cell contact-cell">手机号/邮箱</div>
+              <div class="table-cell contact-cell">手机号</div>
             </div>
             <div class="table-body">
               <div
@@ -113,7 +114,7 @@ import {
   removeStudentFromCourse,
   type CourseStudentResp
 } from '@/apis/education/course'
-import { listStudent, type StudentResp } from '@/apis/education/student'
+import { listStudent, searchStudent, type StudentResp } from '@/apis/education/student'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -258,17 +259,30 @@ const loadStudents = async () => {
   try {
     const keyword = searchKeyword.value.trim()
     console.log('搜索关键词:', keyword)
-    const response = await listStudent({
-      name: keyword || undefined,
-      phone: undefined,
-      sort: ['id,desc'],
-      page: 1,
-      size: 100
-    })
-    console.log('学生列表API响应:', response)
     
-    // 从响应中提取数据数组（学生列表返回的是分页对象，数据在 data.list 中）
-    const studentList = response?.data?.list || response?.list || []
+    let studentList: StudentResp[] = []
+    
+    if (keyword) {
+      // 有搜索关键词时，使用搜索接口（支持按姓名或手机号模糊查找）
+      console.log('使用搜索接口')
+      const response = await searchStudent(keyword)
+      // 搜索接口返回的数据在 response.data.data 中（嵌套结构）
+      const searchData = response?.data as any
+      studentList = Array.isArray(searchData?.data) ? searchData.data : []
+    } else {
+      // 无搜索关键词时，使用列表接口获取所有学生
+      console.log('使用列表接口')
+      const response = await listStudent({
+        name: undefined,
+        phone: undefined,
+        sort: ['id,desc'],
+        page: 1,
+        size: 100
+      })
+      // 列表接口返回的数据在 response.data.list 中
+      studentList = Array.isArray(response?.data?.list) ? response.data.list : []
+    }
+    
     console.log('学生列表数据:', studentList)
     console.log('学生数量:', studentList.length)
     

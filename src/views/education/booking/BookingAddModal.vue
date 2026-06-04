@@ -1,7 +1,7 @@
 <template>
   <a-modal
     v-model:visible="visible"
-    :title="title"
+    title="修改预约"
     :mask-closable="false"
     :esc-to-close="false"
     :width="width >= 600 ? 600 : '100%'"
@@ -9,17 +9,34 @@
     @before-ok="save"
     @close="reset"
   >
-    <GiForm ref="formRef" v-model="form" :columns="columns" />
+    <a-form :model="form" layout="vertical">
+      <a-form-item label="教材">
+        <a-select v-model="form.materialId" placeholder="请选择教材" allow-clear @change="onMaterialChange">
+          <a-option v-for="m in materials" :key="m.id" :value="m.id">
+            {{ m.name }}{{ m.level ? ' - ' + m.level : '' }}
+          </a-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="课节">
+        <a-select v-model="form.lessonId" placeholder="请先选择教材" :disabled="!materialLessons.length" allow-clear>
+          <a-option v-for="l in materialLessons" :key="l.id" :value="l.id">
+            {{ l.lessonName }}
+          </a-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="预约备注">
+        <a-textarea v-model="form.remark" placeholder="请输入备注" :max-length="1024" show-word-limit />
+      </a-form-item>
+    </a-form>
   </a-modal>
 </template>
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
-import { getBooking, addBooking, updateBooking } from '@/apis/education/booking'
-import { type ColumnItem, GiForm } from '@/components/GiForm'
-import { useResetReactive } from '@/hooks'
-import { useDict } from '@/hooks/app'
+import { getBooking, updateBooking } from '@/apis/education/booking'
+import { listMaterial } from '@/apis/education/material'
+import { listMaterialLessonsByMaterialId } from '@/apis/education/materialLesson'
 
 const emit = defineEmits<{
   (e: 'save-success'): void
@@ -29,104 +46,70 @@ const { width } = useWindowSize()
 
 const dataId = ref('')
 const visible = ref(false)
-const isUpdate = computed(() => !!dataId.value)
-const title = computed(() => (isUpdate.value ? '修改预约' : '新增预约'))
-const formRef = ref<InstanceType<typeof GiForm>>()
 
-const [form, resetForm] = useResetReactive({
-  // todo 待补充
+const form = reactive({
+  materialId: null as number | null,
+  lessonId: null as number | null,
+  remark: ''
 })
 
-const columns: ColumnItem[] = reactive([
-  {
-    label: '',
-    field: 'startDate',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '',
-    field: 'startTime',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '所属学生姓名',
-    field: 'studentName',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '预约会员卡名称',
-    field: 'cardName',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '预约教材名字',
-    field: 'materialName',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '预约备注',
-    field: 'remark',
-    type: 'input',
-    span: 24,
-  },
-  {
-    label: '创建人',
-    field: 'createUser',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-])
+const materials = ref<any[]>([])
+const materialLessons = ref<any[]>([])
 
-// 重置
-const reset = () => {
-  formRef.value?.formRef?.resetFields()
-  resetForm()
+const loadMaterials = () => {
+  listMaterial({ page: 1, size: 1000 } as any)
+    .then(res => {
+      const data = res?.data as any
+      materials.value = Array.isArray(data) ? data : (data?.list || [])
+    })
+    .catch(() => { materials.value = [] })
 }
 
-// 保存
+const onMaterialChange = (id: any) => {
+  form.lessonId = null
+  materialLessons.value = []
+  if (!id) return
+  listMaterialLessonsByMaterialId(String(id))
+    .then(res => {
+      const data = res?.data as any
+      materialLessons.value = Array.isArray(data) ? data : (data?.list || [])
+    })
+    .catch(() => { materialLessons.value = [] })
+}
+
+const reset = () => {
+  form.materialId = null
+  form.lessonId = null
+  form.remark = ''
+  materialLessons.value = []
+}
+
 const save = async () => {
   try {
-    const isInvalid = await formRef.value?.formRef?.validate()
-    if (isInvalid) return false
-    if (isUpdate.value) {
-      await updateBooking(form, dataId.value)
-      Message.success('修改成功')
-    } else {
-      await addBooking(form)
-      Message.success('新增成功')
-    }
+    await updateBooking(form, dataId.value)
+    Message.success('修改成功')
     emit('save-success')
     return true
-  } catch (error) {
+  } catch {
     return false
   }
 }
 
-// 新增
-const onAdd = async () => {
-  reset()
-  dataId.value = ''
-  visible.value = true
-}
-
-// 修改
 const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
+  loadMaterials()
   const { data } = await getBooking(id)
-  Object.assign(form, data)
+  form.materialId = (data as any).materialId ?? null
+  form.lessonId = (data as any).lessonId ?? null
+  form.remark = (data as any).remark ?? ''
+  if (form.materialId) {
+    onMaterialChange(form.materialId)
+  }
   visible.value = true
 }
 
-defineExpose({ onAdd, onUpdate })
+defineExpose({ onUpdate })
 </script>
 
 <style scoped lang="scss"></style>

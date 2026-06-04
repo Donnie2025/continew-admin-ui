@@ -16,10 +16,11 @@
         <div style="line-height: 1.8">
           <div><strong>导入说明：</strong></div>
           <div>1. 请将学生数据粘贴到下方文本框中</div>
-          <div>2. 数据格式：每行一个学生，学生姓名和手机号之间用Tab键分隔</div>
-          <div>3. 示例格式：张三[Tab]13800138000</div>
-          <div>4. 可以直接从Excel复制粘贴</div>
-          <div>5. 如果手机号已存在，将更新学生姓名</div>
+          <div>2. 数据格式：每行一个学生，字段之间用 Tab 键分隔</div>
+          <div>3. 示例格式：张三[Tab]13800138000[Tab]英绘口语降练</div>
+          <div>4. 代理商列可选，支持：英绘口语降练、高能少年团、高能少年团150、高能少年团140、高能少年团20、林恩悦读坊、优言家庭英语、熊哥口语降练</div>
+          <div>5. 可以直接从 Excel 复制粘贴</div>
+          <div>6. 如果手机号已存在，将更新学生姓名和代理商</div>
         </div>
       </a-alert>
 
@@ -31,7 +32,7 @@
         </div>
         <a-textarea
           v-model="form.importData"
-          placeholder="请粘贴学生数据，格式：学生姓名[Tab]手机号码&#10;例如：&#10;一方净土&#9;18845148885&#10;禾乃子&#9;15204676821&#10;junxi8&#9;15976155370"
+          placeholder="请粘贴学生数据，格式：学生姓名[Tab]手机号码[Tab]代理商（可选）&#10;例如：&#10;一方净土&#9;18845148885&#9;英绘口语降练&#10;禾尊子&#9;15204676821&#9;高能少年团150&#10;junxi8&#9;15976155370"
           :auto-size="{ minRows: 10, maxRows: 20 }"
           allow-clear
         />
@@ -43,8 +44,8 @@
       <!-- 导入结果 -->
       <div v-if="importResult">
         <a-alert
-          :type="importResult.failureCount > 0 ? 'warning' : 'success'"
-          :title="`导入完成：成功 ${importResult.successCount} 条，失败 ${importResult.failureCount} 条`"
+          :type="importResult.failureCount > 0 ? 'error' : importResult.warningCount > 0 ? 'warning' : 'success'"
+          :title="`导入完成：成功 ${importResult.successCount} 条，失败 ${importResult.failureCount} 条，警告 ${importResult.warningCount ?? 0} 条`"
         >
           <template v-if="importResult.failures && importResult.failures.length > 0">
             <div style="margin-top: 12px">
@@ -59,6 +60,23 @@
                   <a-table-column title="学生姓名" data-index="studentName" :width="120" />
                   <a-table-column title="手机号" data-index="phone" :width="130" />
                   <a-table-column title="失败原因" data-index="reason" />
+                </template>
+              </a-table>
+            </div>
+          </template>
+          <template v-if="importResult.warnings && importResult.warnings.length > 0">
+            <div style="margin-top: 12px">
+              <div style="font-weight: bold; margin-bottom: 8px">警告详情（已导入，但代理商未能匹配）：</div>
+              <a-table
+                :data="importResult.warnings"
+                :pagination="false"
+                :max-height="200"
+                size="small"
+              >
+                <template #columns>
+                  <a-table-column title="学生姓名" data-index="studentName" :width="120" />
+                  <a-table-column title="手机号" data-index="phone" :width="130" />
+                  <a-table-column title="警告信息" data-index="message" />
                 </template>
               </a-table>
             </div>

@@ -9,7 +9,7 @@
     @cancel="onCancel"
   >
     <a-form ref="formRef" :model="form" :rules="rules" layout="vertical">
-      <a-form-item label="选择教材" name="materialId" required>
+      <a-form-item v-if="!presetMaterialId" label="选择教材" name="materialId" required>
         <a-select
           v-model="form.materialId"
           placeholder="请选择要导入课节的教材"
@@ -116,6 +116,12 @@ import { listMaterial } from '@/apis/education/material'
 import { Message } from '@arco-design/web-vue'
 
 defineOptions({ name: 'MaterialLessonImportModal' })
+
+const props = withDefaults(defineProps<{
+  presetMaterialId?: string
+}>(), {
+  presetMaterialId: undefined
+})
 
 const emit = defineEmits<{
   'import-success': []
@@ -256,7 +262,11 @@ const resetForm = () => {
 const onOpen = () => {
   visible.value = true
   resetForm()
-  getMaterialList()
+  if (props.presetMaterialId) {
+    form.materialId = props.presetMaterialId
+  } else {
+    getMaterialList()
+  }
 }
 
 // 暴露方法

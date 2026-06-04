@@ -99,3 +99,13 @@ export function cancelBookingByTeacher(bookingId: string) {
 export function cancelBookingBySlotAndStudent(slotId: string, studentId: string) {
   return http.post(`${BASE_URL}/cancel-by-slot`, { slotId, studentId })
 }
+
+/** @desc 导入预约（Excel） */
+export function importBookings(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return http.post<Array<{ row: number; success: boolean; message: string; bookingId?: string }>>(
+    '/education/slot/import-booking',
+    formData,
+  )
+}

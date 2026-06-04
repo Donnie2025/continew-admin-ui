@@ -1,7 +1,7 @@
 <template>
   <div class="gi_table_page">
     <GiTable
-      title="学生管理管理"
+      title="学生管理"
       row-key="id"
       :data="dataList"
       :columns="columns"
@@ -15,6 +15,16 @@
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.name" placeholder="请输入学生姓名" allow-clear @search="search" />
 	    <a-input-search v-model="queryForm.phone" placeholder="请输入手机号码" allow-clear @search="search" />
+        <a-select
+          v-model="queryForm.agentCode"
+          placeholder="请选择代理商"
+          allow-clear
+          allow-search
+          style="width: 180px"
+          @change="search"
+        >
+          <a-option v-for="opt in agentOptions" :key="opt.code" :value="opt.code">{{ opt.name }}</a-option>
+        </a-select>
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -49,6 +59,20 @@
           </template>
         </a-image>
         <a-avatar v-else :size="40">{{ record.name?.[0]?.toUpperCase() }}</a-avatar>
+      </template>
+      <template #activeCards="{ record }">
+        <span v-if="!record.activeCards || record.activeCards.length === 0" style="color: var(--color-text-3)">-</span>
+        <a-space v-else wrap :size="4">
+          <a-tooltip
+            v-for="(card, idx) in record.activeCards"
+            :key="idx"
+            :content="`到期: ${card.expireDate ?? '永久'}`"
+          >
+            <a-tag color="arcoblue" size="small">
+              {{ card.cardName }} ({{ ['TL','TU'].includes(card.cardType) ? card.balance + '次' : '₱' + card.balance }})
+            </a-tag>
+          </a-tooltip>
+        </a-space>
       </template>
       <template #enableRecording="{ record }">
         <a-tag v-if="record.enableRecording === 1" color="green">允许录课</a-tag>
@@ -105,6 +129,7 @@ import StudentBatchImportModal from './StudentBatchImportModal.vue'
 import StudentSetPasswordModal from './StudentSetPasswordModal.vue'
 import StudentEditNameModal from './StudentEditNameModal.vue'
 import { type StudentResp, type StudentQuery, deleteStudent, exportStudent, listStudent } from '@/apis/education/student'
+import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
@@ -114,10 +139,13 @@ import { IconEye, IconEdit } from '@arco-design/web-vue/es/icon'
 defineOptions({ name: 'Student' })
 
 const { sex_type } = useDict('sex_type')
+const agentOptions = ref<AgentOption[]>([])
+listAgentOptions().then(res => { agentOptions.value = res.data })
 
 const queryForm = reactive<StudentQuery>({
   name: undefined,
   phone: undefined,
+  agentCode: undefined,
   sort: ['id,desc']
 })
 
@@ -131,12 +159,12 @@ const {
 const columns: TableInstance['columns'] = [
   { title: 'ID', dataIndex: 'id', slotName: 'id' },
   { title: '学生姓名', dataIndex: 'name', slotName: 'name' },
+  { title: '代理商编码', dataIndex: 'agentCode', width: 130, ellipsis: true, tooltip: true },
   { title: '头像', dataIndex: 'avatar', slotName: 'avatar' },
   { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
-  { title: '邮箱', dataIndex: 'email', slotName: 'email' },
+  { title: '会员卡', dataIndex: 'activeCards', slotName: 'activeCards', width: 200 },
   { title: '是否允许录课', dataIndex: 'enableRecording', slotName: 'enableRecording' },
   { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime' },
-  { title: '所属代理的ID', dataIndex: 'agentId', slotName: 'agentId' },
   {
     title: '操作',
     dataIndex: 'action',
@@ -152,6 +180,7 @@ const columns: TableInstance['columns'] = [
 const reset = () => {
   queryForm.name = undefined
   queryForm.phone = undefined
+  queryForm.agentCode = undefined
   search()
 }
 

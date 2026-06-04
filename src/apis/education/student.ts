@@ -5,27 +5,34 @@ const BASE_URL = '/education/student'
 export interface StudentResp {
   id: string
   name: string
+  agentCode?: string
   phone: string
   email: string
   registerTime: string
-  agentId: string
   avatar: string
   remark: string
+  enableRecording: number
   createTime: string
   institutionId: string
   createUserString: string
   updateUserString: string
   disabled: boolean
+  activeCards: Array<{
+    cardName: string
+    cardType: string
+    balance: number
+    expireDate: string | null
+  }>
 }
 export interface StudentDetailResp {
   id: string
   name: string
+  agentCode?: string
   /** 性别（male-男 female-女） */
   gender: string
   phone: string
   email: string
   registerTime: string
-  agentId: string
   avatar: string
   remark: string
   status: string
@@ -40,6 +47,7 @@ export interface StudentDetailResp {
 export interface StudentQuery {
   name: string | undefined
   phone: string | undefined
+  agentCode: string | undefined
   sort: Array<string>
 }
 export interface StudentPageQuery extends StudentQuery, PageQuery {}
@@ -86,6 +94,12 @@ export interface StudentBatchImportResp {
     phone: string
     reason: string
   }>
+  warningCount: number
+  warnings: Array<{
+    studentName: string
+    phone: string
+    message: string
+  }>
 }
 
 /** @desc 批量导入学生 */
@@ -131,4 +145,9 @@ export function verifyStudentPassword(data: StudentVerifyPasswordReq) {
 /** @desc 修改学生姓名并同步到ClassIn */
 export function updateStudentName(id: string, newName: string) {
   return http.put<string>(`${BASE_URL}/${id}/name?newName=${encodeURIComponent(newName)}`)
+}
+
+/** @desc 搜索学生（支持姓名和手机号模糊查找） */
+export function searchStudent(keyword: string) {
+  return http.get<StudentResp[]>(`${BASE_URL}/search`, { keyword })
 }

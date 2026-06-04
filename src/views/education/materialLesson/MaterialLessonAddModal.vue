@@ -22,6 +22,12 @@ import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
 
+const props = withDefaults(defineProps<{
+  presetMaterialId?: string
+}>(), {
+  presetMaterialId: undefined
+})
+
 const emit = defineEmits<{
   (e: 'save-success'): void
 }>()
@@ -56,24 +62,27 @@ const getMaterialList = async () => {
   }
 }
 
-const columns: ColumnItem[] = reactive([
-  {
-    label: '选择教材',
-    field: 'materialId',
-    type: 'select',
-    span: 24,
-    required: true,
-    props: {
-      placeholder: '请选择教材',
-      filterable: true,
-      allowSearch: true,
-      options: computed(() => materialList.value.map(item => ({
-        label: `${item.name} (${item.level})`,
-        value: item.id
-      })))
-    }
-  },
-  {
+const columns = computed<ColumnItem[]>(() => {
+  const cols: ColumnItem[] = []
+  if (!props.presetMaterialId) {
+    cols.push({
+      label: '选择教材',
+      field: 'materialId',
+      type: 'select',
+      span: 24,
+      required: true,
+      props: {
+        placeholder: '请选择教材',
+        filterable: true,
+        allowSearch: true,
+        options: materialList.value.map(item => ({
+          label: `${item.name} (${item.level})`,
+          value: item.id
+        }))
+      }
+    })
+  }
+  cols.push({
     label: '课节名字',
     field: 'lessonName',
     type: 'input',
@@ -82,8 +91,9 @@ const columns: ColumnItem[] = reactive([
     props: {
       placeholder: '请输入课节名字'
     }
-  },
-])
+  })
+  return cols
+})
 
 // 重置
 const reset = () => {
@@ -114,7 +124,11 @@ const save = async () => {
 const onAdd = async () => {
   reset()
   dataId.value = ''
-  await getMaterialList() // 获取教材列表
+  if (props.presetMaterialId) {
+    form.materialId = props.presetMaterialId
+  } else {
+    await getMaterialList()
+  }
   visible.value = true
 }
 
