@@ -15,21 +15,22 @@
       <template #toolbar-left>
 	    <a-input-search v-model="queryForm.studentName" placeholder="请输入所属学生姓名" allow-clear @search="search" />
 	    <a-input-search v-model="queryForm.cardName" placeholder="请输入预约会员卡名称" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.createUser" placeholder="请输入创建人" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
         </a-button>
       </template>
       <template #toolbar-right>
-        <a-button v-permission="['education:booking:create']" type="primary" @click="onAdd">
-          <template #icon><icon-plus /></template>
-          <template #default>新增</template>
-        </a-button>
         <a-button v-permission="['education:booking:export']" @click="onExport">
           <template #icon><icon-download /></template>
           <template #default>导出</template>
         </a-button>
+      </template>
+      <template #courseDateTime="{ record }">
+        <span v-if="record.slotDate">{{ record.slotDate.slice(0,4) }}-{{ record.slotDate.slice(4,6) }}-{{ record.slotDate.slice(6,8) }} {{ record.slotTime }}</span>
+      </template>
+      <template #materialName="{ record }">
+        <span v-if="record.materialName">{{ record.materialName }}{{ record.materialLevel ? ' - ' + record.materialLevel : '' }}</span>
       </template>
       <template #action="{ record }">
         <a-space>
@@ -69,7 +70,6 @@ defineOptions({ name: 'Booking' })
 const queryForm = reactive<BookingQuery>({
   studentName: undefined,
   cardName: undefined,
-  createUser: undefined,
   sort: ['id,desc']
 })
 
@@ -81,21 +81,13 @@ const {
   handleDelete
 } = useTable((page) => listBooking({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
-  { title: '所属课程ID', dataIndex: 'slotId', slotName: 'slotId' },
-  { title: '', dataIndex: 'startDate', slotName: 'startDate' },
-  { title: '', dataIndex: 'startTime', slotName: 'startTime' },
-  { title: '所属学生姓名', dataIndex: 'studentName', slotName: 'studentName' },
-  { title: '预约手机号', dataIndex: 'phone', slotName: 'phone' },
-  { title: '预约会员卡ID', dataIndex: 'cardId', slotName: 'cardId' },
-  { title: '预约会员卡名称', dataIndex: 'cardName', slotName: 'cardName' },
-  { title: '操作人名字', dataIndex: 'operatorName', slotName: 'operatorName' },
-  { title: '操作时间', dataIndex: 'operateTime', slotName: 'operateTime' },
-  { title: '预约教材名字', dataIndex: 'materialName', slotName: 'materialName' },
+  { title: '姓名', dataIndex: 'studentName', slotName: 'studentName' },  
+  { title: '时间', dataIndex: 'slotDate', slotName: 'courseDateTime' },
+  { title: '手机号', dataIndex: 'studentPhone', slotName: 'studentPhone' },
+  { title: '会员卡', dataIndex: 'cardName', slotName: 'cardName' },
+  { title: '预约教材', dataIndex: 'materialName', slotName: 'materialName' },
+  { title: '课节', dataIndex: 'lessonName', slotName: 'lessonName' },
   { title: '预约备注', dataIndex: 'remark', slotName: 'remark' },
-  { title: '创建时间', dataIndex: 'createTime', slotName: 'createTime' },
-  { title: '更新时间', dataIndex: 'updateTime', slotName: 'updateTime' },
-  { title: '创建人', dataIndex: 'createUserString', slotName: 'createUser' },
-  { title: '修改人', dataIndex: 'updateUserString', slotName: 'updateUser' },
   {
     title: '操作',
     dataIndex: 'action',
@@ -111,7 +103,6 @@ const columns: TableInstance['columns'] = [
 const reset = () => {
   queryForm.studentName = undefined
   queryForm.cardName = undefined
-  queryForm.createUser = undefined
   search()
 }
 
@@ -129,11 +120,6 @@ const onExport = () => {
 }
 
 const BookingAddModalRef = ref<InstanceType<typeof BookingAddModal>>()
-// 新增
-const onAdd = () => {
-  BookingAddModalRef.value?.onAdd()
-}
-
 // 修改
 const onUpdate = (record: BookingResp) => {
   BookingAddModalRef.value?.onUpdate(record.id)

@@ -11,6 +11,10 @@
             <a-button>复制课表</a-button>
             <a-button>批量删除</a-button>
             <a-button>导出</a-button>
+            <a-button @click="onImport">
+              <template #icon><icon-upload /></template>
+              导入预约
+            </a-button>
           </a-button-group>
         </div>
       </div>
@@ -343,6 +347,51 @@
     </template>
   </a-modal>
 
+  <!-- 导入预约对话框 -->
+  <a-modal
+    v-model:visible="importVisible"
+    title="导入预约"
+    :footer="false"
+    :width="560"
+    @cancel="onImportClose"
+  >
+    <div class="import-dialog">
+      <a-alert type="info" style="margin-bottom: 16px">
+        Excel 列：<strong>上课时间</strong>、<strong>上课老师</strong>、<strong>预约会员</strong>、<strong>会员手机号</strong>、<strong>使用会员卡</strong>、<strong>预约备注</strong>（第一行为标题行）
+      </a-alert>
+      <a-upload
+        :auto-upload="false"
+        accept=".xls,.xlsx"
+        :limit="1"
+        :show-file-list="true"
+        @change="onFileChange"
+      >
+        <template #upload-button>
+          <a-button type="outline">
+            <template #icon><icon-upload /></template>
+            选择 Excel 文件
+          </a-button>
+        </template>
+      </a-upload>
+      <div style="margin-top: 16px; display: flex; gap: 8px">
+        <a-button type="primary" :loading="importLoading" :disabled="!importFile" @click="doImport">开始导入</a-button>
+        <a-button @click="onImportClose">取消</a-button>
+      </div>
+      <div v-if="importResults.length" style="margin-top: 20px">
+        <a-divider />
+        <p style="margin-bottom: 8px; font-weight: 500">导入结果（成功 {{ importResults.filter(r => r.success).length }} / 共 {{ importResults.length }} 行）</p>
+        <a-scrollbar style="max-height: 300px; overflow-y: auto">
+          <a-list size="small" :bordered="false">
+            <a-list-item v-for="r in importResults" :key="r.row">
+              <a-tag :color="r.success ? 'green' : 'red'" style="margin-right: 8px">第 {{ r.row }} 行</a-tag>
+              {{ r.message }}
+            </a-list-item>
+          </a-list>
+        </a-scrollbar>
+      </div>
+    </div>
+  </a-modal>
+
   <!-- 添加会员预约弹窗 -->
   <a-modal
     v-model:visible="studentReservationVisible"
@@ -381,6 +430,7 @@
               v-model="reservationForm.cardId"
               placeholder="请选择会员拥有的会员卡"
               :disabled="!selectedMember || memberCards.length === 0"
+              dropdown-class="card-select-dropdown"
               @change="(val) => console.log('会员卡选择变更:', val)"
             >
               <a-option
@@ -389,7 +439,7 @@
                 :value="card.id"
                 :disabled="card.disabled"
               >
-                {{ card.name }} (剩余: {{ card.balance }}次)
+                {{ card.cardTitle }} · {{ ['TL','TU'].includes(card.cardType) ? card.balance + '次' : '₱' + card.balance }}
                 <span v-if="card.disabled" style="color: #ff4d4f; margin-left: 8px;">
                   {{ card.balance <= 0 ? '余额不足' : '已停用' }}
                 </span>
@@ -402,13 +452,25 @@
         </a-form-item>
 
         <a-form-item field="materialId" label="教材：">
-          <a-select v-model="reservationForm.materialId" placeholder="请选择">
+          <a-select v-model="reservationForm.materialId" placeholder="请选择" @change="onMaterialChange">
             <a-option
               v-for="material in materials"
               :key="material.id"
               :value="material.id"
             >
-              {{ material.name }}
+              {{ material.name }}{{ material.level ? ' - ' + material.level : '' }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item field="lessonId" label="课节：">
+          <a-select v-model="reservationForm.lessonId" placeholder="请先选择教材" :disabled="!materialLessons.length">
+            <a-option
+              v-for="lesson in materialLessons"
+              :key="lesson.id"
+              :value="lesson.id"
+            >
+              {{ lesson.lessonName }}
             </a-option>
           </a-select>
         </a-form-item>
@@ -435,8 +497,49 @@ import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableS
 import dayjs from 'dayjs'
 import { searchMembers, getMemberCards } from '@/apis/member/index'
 import { listMaterial } from '@/apis/education/material'
+import { listMaterialLessonsByMaterialId } from '@/apis/education/materialLesson'
 import { createReservation } from '@/apis/education/reservation'
-import { cancelBookingBySlotAndStudent } from '@/apis/education/booking'
+import { cancelBookingBySlotAndStudent, importBookings } from '@/apis/education/booking'
+
+// 导入预约
+const importVisible = ref(false)
+const importLoading = ref(false)
+const importFile = ref<File | null>(null)
+const importResults = ref<Array<{ row: number; success: boolean; message: string }>>([])
+
+const onImport = () => {
+  importFile.value = null
+  importResults.value = []
+  importVisible.value = true
+}
+
+const onImportClose = () => {
+  importVisible.value = false
+  importFile.value = null
+  importResults.value = []
+}
+
+const onFileChange = (fileList: any[]) => {
+  if (fileList && fileList.length > 0) {
+    importFile.value = fileList[fileList.length - 1].file as File
+  } else {
+    importFile.value = null
+  }
+}
+
+const doImport = async () => {
+  if (!importFile.value) return
+  importLoading.value = true
+  importResults.value = []
+  try {
+    const res = await importBookings(importFile.value)
+    importResults.value = (res as any)?.data ?? res ?? []
+  } catch (e: any) {
+    Message.error('导入失败: ' + (e?.message ?? e))
+  } finally {
+    importLoading.value = false
+  }
+}
 
 // 选中的课程数据类型
 interface CourseItem {
@@ -1214,12 +1317,14 @@ const reservationForm = reactive({
   studentId: null as string | null,
   cardId: '' as string,
   materialId: null as string | null,
+  lessonId: null as string | null,
   remark: ''
 })
 const selectedMember = ref<any>(null)
 const searchedMembers = ref<any[]>([])
 const memberCards = ref<any[]>([])
 const materials = ref<any[]>([])
+const materialLessons = ref<any[]>([])
 const cardWarning = ref(false)
 const memberSearchLoading = ref(false)
 const debug = ref(false) // 设置为false以隐藏调试信息
@@ -1236,8 +1341,10 @@ const handleAddStudentReservation = () => {
     studentId: null,
     cardId: '',
     materialId: null,
+    lessonId: null,
     remark: ''
   })
+  materialLessons.value = []
   selectedMember.value = null
   searchedMembers.value = []
   memberCards.value = []
@@ -1255,10 +1362,11 @@ const handleAddStudentReservation = () => {
 
 // 加载教材列表
 const loadMaterials = () => {
-  listMaterial()
+  listMaterial({ page: 1, size: 1000 } as any)
     .then(res => {
       if (res && res.data) {
-        materials.value = res.data
+        const data = res.data as any
+        materials.value = Array.isArray(data) ? data : (data.list || [])
       } else {
         materials.value = []
       }
@@ -1266,6 +1374,25 @@ const loadMaterials = () => {
     .catch(error => {
       console.error('加载教材列表失败:', error)
       materials.value = []
+    })
+}
+
+// 教材切换时加载课节列表
+const onMaterialChange = (materialId: any) => {
+  reservationForm.lessonId = null
+  materialLessons.value = []
+  if (!materialId) return
+  listMaterialLessonsByMaterialId(String(materialId))
+    .then(res => {
+      if (res && res.data) {
+        const data = res.data as any
+        materialLessons.value = Array.isArray(data) ? data : (data.list || [])
+      } else {
+        materialLessons.value = []
+      }
+    })
+    .catch(() => {
+      materialLessons.value = []
     })
 }
 
@@ -1344,7 +1471,7 @@ const loadMemberCards = (studentId: string | number) => {
           return {
             ...card,
             id: cardId,
-            disabled: card.status === 0 || card.remainingTimes <= 0
+            disabled: card.status === 0 || card.balance <= 0
           };
         });
         
@@ -1440,6 +1567,7 @@ const handleStudentReservationOk = () => {
     studentId: studentId,
     stuCardId: stuCardId, // 修改字段名为stuCardId
     materialId: reservationForm.materialId ? (typeof reservationForm.materialId === 'string' ? parseInt(reservationForm.materialId, 10) : reservationForm.materialId) : null,
+    lessonId: reservationForm.lessonId ? (typeof reservationForm.lessonId === 'string' ? parseInt(reservationForm.lessonId, 10) : reservationForm.lessonId) : null,
     remark: reservationForm.remark,
     teacherId: selectedCourse.value.teacherId,
     createUser: 1 // 添加创建人ID，这里使用默认值1
@@ -2207,5 +2335,15 @@ const handleDeleteCourse = () => {
     margin-bottom: 0;
   }
   font-size: 13px;
+}
+</style>
+
+<style lang="less">
+.card-select-dropdown {
+  .arco-select-option {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+  }
 }
 </style>

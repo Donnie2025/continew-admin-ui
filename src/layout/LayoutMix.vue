@@ -44,7 +44,7 @@ import Logo from './components/Logo.vue'
 import MenuFoldBtn from './components/MenuFoldBtn.vue'
 import WwAds from './components/WwAds.vue'
 import GiFooter from '@/components/GiFooter/index.vue'
-import { useAppStore, useRouteStore } from '@/stores'
+import { useAppStore, useRouteStore, useUserStore } from '@/stores'
 import { isExternal } from '@/utils/validate'
 import { filterTree } from '@/utils'
 import { useDevice } from '@/hooks'
@@ -54,10 +54,16 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const routeStore = useRouteStore()
+const userStore = useUserStore()
 const { isDesktop } = useDevice()
-// 过滤是菜单的路由
+// 过滤是菜单的路由（同时检查角色权限）
 const cloneRoutes = JSON.parse(JSON.stringify(routeStore.routes)) as RouteRecordRaw[]
-const menuRoutes = filterTree(cloneRoutes, (i) => i.meta?.hidden === false)
+const menuRoutes = filterTree(cloneRoutes, (i) => {
+  if (i.meta?.hidden !== false) return false
+  const roles = (i.meta as any)?.roles as string[] | undefined
+  if (!roles || roles.length === 0) return true
+  return roles.some((r: string) => userStore.roles.includes(r))
+})
 
 // 顶部一级菜单
 const topMenus = ref<RouteRecordRaw[]>([])

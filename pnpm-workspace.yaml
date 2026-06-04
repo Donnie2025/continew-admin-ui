@@ -1,0 +1,11 @@
+allowBuilds:
+  '@parcel/watcher': true
+  '@vue-office/docx': true
+  '@vue-office/excel': true
+  '@vue-office/pdf': true
+  core-js: true
+  es5-ext: true
+  esbuild: true
+  unrs-resolver: true
+  vue-demi: true
+  vue-echarts: true

@@ -32,6 +32,7 @@ import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getCourse, addCourse, updateCourse } from '@/apis/education/course'
 import { listActiveInstitutions, type InstitutionResp } from '@/apis/education/institution'
+import { listAgentOptions, type AgentOption } from '@/apis/education/agent'
 import { searchTeachers, getTeacher, type TeacherResp } from '@/apis/education/teacher'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
@@ -48,6 +49,9 @@ const visible = ref(false)
 const isUpdate = computed(() => !!dataId.value)
 const title = computed(() => (isUpdate.value ? '修改班级' : '新增班级'))
 const formRef = ref<InstanceType<typeof GiForm>>()
+
+// 代理机构列表
+const agentOptions = ref<{ label: string; value: string }[]>([])
 
 // 机构列表
 const institutionOptions = ref<{ label: string; value: string | number }[]>([])
@@ -124,6 +128,17 @@ const columns: ColumnItem[] = reactive([
     },
   },
   {
+    label: '代理机构',
+    field: 'agentCode',
+    type: 'select',
+    span: 24,
+    props: {
+      allowClear: true,
+      options: agentOptions,
+      placeholder: '请选择代理机构'
+    }
+  },
+  {
     label: '所属机构',
     field: 'institutionId',
     type: 'select',
@@ -135,7 +150,28 @@ const columns: ColumnItem[] = reactive([
       placeholder: '请选择所属机构'
     }
   },
+  {
+    label: '备注',
+    field: 'remark',
+    type: 'textarea',
+    span: 24,
+    props: {
+      placeholder: '请输入备注信息',
+      maxLength: 500,
+      showWordLimit: true,
+      autoSize: { minRows: 2, maxRows: 4 }
+    }
+  },
 ])
+
+// 加载代理机构列表
+const fetchAgentOptions = async () => {
+  const { data } = await listAgentOptions()
+  agentOptions.value = (data || []).map((item: AgentOption) => ({
+    label: item.name,
+    value: item.code
+  }))
+}
 
 // 加载机构列表
 const fetchInstitutionOptions = async (setDefault = false) => {
@@ -194,7 +230,7 @@ const onAdd = async () => {
   dataId.value = ''
   // 设置默认值
   form.courseSettingId = '1'
-  await fetchInstitutionOptions(true) // 传递true表示设置默认值
+  await Promise.all([fetchAgentOptions(), fetchInstitutionOptions(true)])
   visible.value = true
 }
 
@@ -202,7 +238,7 @@ const onAdd = async () => {
 const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
-  await fetchInstitutionOptions(false) // 编辑时不设置默认值
+  await Promise.all([fetchAgentOptions(), fetchInstitutionOptions(false)])
   const { data } = await getCourse(id)
   Object.assign(form, data)
   

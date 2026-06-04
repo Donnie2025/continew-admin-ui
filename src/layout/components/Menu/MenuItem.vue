@@ -1,5 +1,5 @@
 <template>
-  <template v-if="!item.meta?.hidden">
+  <template v-if="!item.meta?.hidden && hasPermission">
     <a-menu-item
       v-if="
         isOneShowingChild
@@ -30,6 +30,7 @@
 <script setup lang="ts">
 import type { RouteRecordRaw } from 'vue-router'
 import MenuIcon from './MenuIcon.vue'
+import { useUserStore } from '@/stores'
 
 defineOptions({ name: 'MenuItem' })
 const props = withDefaults(defineProps<Props>(), {})
@@ -39,6 +40,14 @@ const attrs = useAttrs()
 interface Props {
   item: RouteRecordRaw
 }
+
+const userStore = useUserStore()
+
+const hasPermission = computed(() => {
+  const roles = (props.item.meta as any)?.roles as string[] | undefined
+  if (!roles || roles.length === 0) return true
+  return roles.some((r) => userStore.roles.includes(r))
+})
 
 // 如果hidden: false那么代表这个路由项显示在左侧菜单栏中
 // 如果props.item的子项children只有一个hidden: false的子元素, 那么onlyOneChild就表示这个子元素

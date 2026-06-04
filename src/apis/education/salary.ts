@@ -59,9 +59,14 @@ export interface SalaryQuery {
 }
 export interface SalaryPageQuery extends SalaryQuery, PageQuery {}
 
+export interface SalaryPageRes extends PageRes<SalaryResp[]> {
+  totalCourseAmount: number
+  totalCourseCount: number
+}
+
 /** @desc 查询薪资列表 */
 export function listSalary(query: SalaryPageQuery) {
-  return http.get<PageRes<SalaryResp[]>>(BASE_URL, query)
+  return http.get<SalaryPageRes>(BASE_URL, query)
 }
 
 /** @desc 查询薪资详情 */

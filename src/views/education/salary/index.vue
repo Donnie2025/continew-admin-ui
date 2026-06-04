@@ -81,10 +81,10 @@
           <template #icon><icon-calendar /></template>
           <template #default>生成工资流水</template>
         </a-button>
-        <a-button v-permission="['education:salary:export']" @click="onExport">
+        <!-- <a-button v-permission="['education:salary:export']" @click="onExport">
           <template #icon><icon-download /></template>
           <template #default>导出</template>
-        </a-button>
+        </a-button> -->
         <a-button 
           v-permission="['education:salary:update']" 
           type="outline" 
@@ -182,9 +182,9 @@ const queryForm = reactive<SalaryQuery>({
 // 清理查询参数，将空字符串转换为 undefined
 const cleanQueryParams = (params: any) => {
   const cleaned = { ...params }
-  if (cleaned.isSettled === '') {
-    cleaned.isSettled = undefined
-  }
+  if (cleaned.isSettled === '') cleaned.isSettled = undefined
+  if (cleaned.teacherName === '') cleaned.teacherName = undefined
+  if (cleaned.groupName === '') cleaned.groupName = undefined
   return cleaned
 }
 
@@ -209,73 +209,33 @@ const onSelectAll = (checked: boolean) => {
   }
 }
 
-// 计算所有数据的总金额和总课程数
-const calculateTotalAmount = async () => {
-  try {
-    // 使用最大允许的每页条数获取第一页数据
-    const cleanedParams = cleanQueryParams(queryForm)
-    const { data } = await listSalary({ 
-      ...cleanedParams, 
-      page: 1, 
-      size: 1000 // 使用后端允许的最大值
-    })
-    if (data && data.list) {
-      let totalAmount = 0
-      let totalCount = 0
-      
-      // 统计第一页
-      data.list.forEach((item: any) => {
-        totalAmount += Number(item.courseAmount) || 0
-        totalCount += Number(item.courseCount) || 0
-      })
-      
-      // 如果有更多数据，继续获取
-      const totalRecords = data.total || 0
-      if (totalRecords > 1000) {
-        const totalPages = Math.ceil(totalRecords / 1000)
-        const promises = []
-        for (let page = 2; page <= totalPages; page++) {
-          promises.push(listSalary({ ...cleanedParams, page, size: 1000 }))
-        }
-        const results = await Promise.all(promises)
-        results.forEach(result => {
-          if (result.data && result.data.list) {
-            result.data.list.forEach((item: any) => {
-              totalAmount += Number(item.courseAmount) || 0
-              totalCount += Number(item.courseCount) || 0
-            })
-          }
-        })
-      }
-      
-      totalFinalAmount.value = totalAmount
-      totalCourseCount.value = totalCount
-    }
-  } catch (error) {
-    console.error('计算总金额失败:', error)
-    totalFinalAmount.value = 0
-    totalCourseCount.value = 0
+// 带汇总数据的薪资查询包装函数
+const fetchSalaryWithSummary = async (page: { page: number, size: number }) => {
+  const params = { ...cleanQueryParams(queryForm), ...page }
+  const res = await listSalary(params)
+  if (res.data) {
+    totalFinalAmount.value = Number(res.data.totalCourseAmount) || 0
+    totalCourseCount.value = Number(res.data.totalCourseCount) || 0
   }
+  return res
 }
 
 const {
   tableData: dataList,
   loading,
   pagination,
-  search: originalSearch,
+  getTableData,
   handleDelete
-} = useTable((page) => listSalary({ ...cleanQueryParams(queryForm), ...page }), { immediate: true })
+} = useTable(fetchSalaryWithSummary, { immediate: false, paginationOption: { defaultPageSize: 50 } })
 
-// 重写 search 方法，在搜索时计算总金额
 const search = async () => {
   selectedRowKeys.value = [] // 清空选择
-  await originalSearch()
-  await calculateTotalAmount()
+  pagination.current = 1
+  await getTableData()
 }
 
-// 初始化时计算总金额
 onMounted(() => {
-  calculateTotalAmount()
+  search()
 })
 
 const columns: TableInstance['columns'] = [

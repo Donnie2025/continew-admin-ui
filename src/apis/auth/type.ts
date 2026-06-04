@@ -13,6 +13,7 @@ export interface UserInfo {
   deptName: string
   roles: string[]
   permissions: string[]
+  agentCode?: string
 }
 
 /** 路由类型 */

@@ -53,6 +53,7 @@ import { ref, computed, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getStudent, addStudent, updateStudent } from '@/apis/education/student'
+import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -72,9 +73,12 @@ const title = computed(() => (isUpdate.value ? '修改学生' : '新增学生'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 const { sex_type } = useDict('sex_type')
 const uploadFile = ref()
+const agentOptions = ref<AgentOption[]>([])
+listAgentOptions().then(res => { agentOptions.value = res.data })
 
 const [form, resetForm] = useResetReactive({
   name: undefined,
+  agentCode: undefined,
   gender: undefined,
   phone: undefined,
   email: undefined,
@@ -82,7 +86,6 @@ const [form, resetForm] = useResetReactive({
   password: undefined,
   remark: undefined,
   enableRecording: 0,
-  agentId: undefined,
   institutionId: undefined
 })
 
@@ -187,6 +190,18 @@ const columns: ColumnItem[] = reactive([
     required: true,
   },
   {
+    label: '代理商',
+    field: 'agentCode',
+    type: 'select',
+    span: 24,
+    props: {
+      options: agentOptions,
+      fieldNames: { value: 'code', label: 'name' },
+      allowClear: true,
+      allowSearch: true,
+    },
+  },
+  {
     label: '手机号码',
     field: 'phone',
     type: 'input',
@@ -241,12 +256,6 @@ const columns: ColumnItem[] = reactive([
         { label: '允许', value: 1 }
       ]
     }
-  },
-  {
-    label: '所属代理ID',
-    field: 'agentId',
-    type: 'input',
-    span: 24,
   },
   {
     label: '所属机构ID',

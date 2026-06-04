@@ -6,6 +6,7 @@ export interface LessonResp {
   id: string
   courseId: string
   courseUid: string
+  agentCode?: string
   activityUid: string
   classUid: string
   unitUid: string
@@ -25,11 +26,16 @@ export interface LessonResp {
   createUserString: string
   updateUserString: string
   disabled: boolean
+  estimatedCost?: number
+  materialId?: string
+  materialName?: string
+  remark?: string
 }
 export interface LessonDetailResp {
   id: string
   courseId: string
   courseUid: string
+  agentCode?: string
   activityUid: string
   classUid: string
   unitUid: string
@@ -62,9 +68,11 @@ export interface LessonQuery {
   courseId: string | undefined
   courseUid: string | undefined
   name: string | undefined
+  agentCode: string | undefined
   teacherUid: string | undefined
   startTime: string | undefined
   endTime: string | undefined
+  courseStatus: string | undefined
   sort: Array<string>
 }
 export interface LessonPageQuery extends LessonQuery, PageQuery {}
@@ -98,6 +106,19 @@ export function deleteLesson(id: string | string[]) {
 /** @desc 导出课堂 */
 export function exportLesson(query: LessonQuery) {
   return http.download(`${BASE_URL}/export`, query)
+}
+
+/** @desc 获取班级关联的教材ID */
+export function getEduCourseMaterialId(courseId: string) {
+  return http.get<string | null>(`${BASE_URL}/course-material/${courseId}`)
+}
+
+/** @desc 设置课堂关联教材 */
+export function setEduLessonMaterial(lessonId: string, materialId: string | null, materialName: string | null) {
+  const qs = new URLSearchParams()
+  if (materialId != null) qs.set('materialId', String(materialId))
+  if (materialName != null) qs.set('materialName', materialName)
+  return http.put(`${BASE_URL}/${lessonId}/material?${qs.toString()}`, {})
 }
 
 /** @desc 获取班级的课节列表 */

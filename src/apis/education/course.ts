@@ -76,6 +76,7 @@ export interface CourseStudentReq {
 }
 export interface CourseQuery {
   name: string | undefined
+  agentCode: string | undefined
   mainTeacherId: string | undefined
   institutionId: string | undefined
   sort: Array<string>

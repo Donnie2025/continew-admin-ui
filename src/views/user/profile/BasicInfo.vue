@@ -49,6 +49,10 @@
             <template #label> <icon-user-group /><span style="margin-left: 5px">角色</span></template>
             {{ userInfo.roles.join('，') }}
           </a-descriptions-item>
+          <a-descriptions-item v-if="userInfo.agentCode" :span="4">
+            <template #label> <icon-tag /><span style="margin-left: 5px">机构编码</span></template>
+            {{ userInfo.agentCode }}
+          </a-descriptions-item>
         </a-descriptions>
       </footer>
     </div>
