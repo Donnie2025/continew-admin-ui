@@ -13,11 +13,12 @@
       @refresh="search"
     >
       <template #toolbar-left>
-	    <a-input-search v-model="queryForm.orderNo" placeholder="请输入订单编号" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.stuName" placeholder="请输入学生姓名" allow-clear @search="search" />
-	    <a-select v-model="queryForm.paymentType" placeholder="请选择支付方式" allow-clear @change="search" style="width: 200px">
-	      <a-option value="wechat">微信支付</a-option>
-	      <a-option value="alipay">支付宝</a-option>
+<!--	    <a-input-search v-model="queryForm.orderNo" placeholder="请输入订单编号" allow-clear @search="search" />-->
+	    <a-input-search v-model="queryForm.studentName" placeholder="请输入学生姓名" allow-clear @search="search" @press-enter="search" />
+	    <a-select v-model="queryForm.paymentMethod" placeholder="请选择支付类型" allow-clear @change="search" style="width: 200px">
+	      <a-option value="online">在线支付</a-option>
+	      <a-option value="qrcode">扫码支付</a-option>
+	      <a-option value="offline">线下支付</a-option>
 	    </a-select>
 	    <a-select v-model="queryForm.orderStatus" placeholder="请选择订单状态" allow-clear @change="search" style="width: 200px">
 	      <a-option value="PENDING">待确认</a-option>
@@ -41,7 +42,6 @@
       </template>
       <template #action="{ record }">
         <a-space>
-          <a-link v-permission="['education:order:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link 
             v-permission="['education:order:update']" 
             v-if="record.orderStatus === 'PENDING'"
@@ -51,16 +51,17 @@
           >
             确认入账
           </a-link>
-          <a-link v-permission="['education:order:update']" title="修改" @click="onUpdate(record)">修改</a-link>
-          <a-link
-            v-permission="['education:order:delete']"
-            status="danger"
-            :disabled="record.disabled"
-            :title="record.disabled ? '不可删除' : '删除'"
-            @click="onDelete(record)"
-          >
-            删除
-          </a-link>
+          <a-link v-permission="['education:order:get']" title="详情" @click="onDetail(record)">详情</a-link>
+<!--          <a-link v-permission="['education:order:update']" title="修改" @click="onUpdate(record)">修改</a-link>-->
+<!--          <a-link-->
+<!--            v-permission="['education:order:delete']"-->
+<!--            status="danger"-->
+<!--            :disabled="record.disabled"-->
+<!--            :title="record.disabled ? '不可删除' : '删除'"-->
+<!--            @click="onDelete(record)"-->
+<!--          >-->
+<!--            删除-->
+<!--          </a-link>-->
         </a-space>
       </template>
     </GiTable>
@@ -82,14 +83,14 @@ import has from '@/utils/has'
 
 defineOptions({ name: 'Order' })
 
-
 const queryForm = reactive<OrderQuery>({
   orderNo: undefined,
-  stuName: undefined,
+  studentName: undefined,
   cardId: undefined,
   cardTitle: undefined,
   cardType: undefined,
   paymentType: undefined,
+  paymentMethod: undefined,
   orderStatus: undefined,
   createUser: undefined,
   sort: ['id,desc']
@@ -103,10 +104,11 @@ const {
   handleDelete
 } = useTable((page) => listOrder({ ...queryForm, ...page }), { immediate: true })
 
-// 支付方式映射
-const paymentTypeMap: Record<string, string> = {
-  'wechat': '微信支付',
-  'alipay': '支付宝'
+// 支付类型映射
+const paymentMethodMap: Record<string, string> = {
+  'online': '在线支付',
+  'qrcode': '扫码支付',
+  'offline': '线下支付'
 }
 
 // 订单状态映射
@@ -117,31 +119,27 @@ const orderStatusMap: Record<string, string> = {
 }
 
 const columns: TableInstance['columns'] = [
-  { title: 'ID', dataIndex: 'id', slotName: 'id' },
-  { title: '订单编号', dataIndex: 'orderNo', slotName: 'orderNo' },
-  { title: '学生ID', dataIndex: 'stuId', slotName: 'stuId' },
-  { title: '学生姓名', dataIndex: 'stuName', slotName: 'stuName' },
-  { title: '会员卡ID', dataIndex: 'cardId', slotName: 'cardId' },
+  { title: 'ID', dataIndex: 'id',width: 50, slotName: 'id' },
+  { title: '学生姓名', dataIndex: 'studentName', slotName: 'studentName' },
   { title: '会员卡标题', dataIndex: 'cardTitle', slotName: 'cardTitle' },
   { title: '订单金额', dataIndex: 'orderPrice', slotName: 'orderPrice' },
-  { 
-    title: '支付方式', 
-    dataIndex: 'paymentType', 
-    render: ({ record }: any) => paymentTypeMap[record.paymentType] || record.paymentType 
+  { title: '支付渠道', dataIndex: 'paymentChannelName', slotName: 'paymentChannelName' },
+  {
+    title: '支付类型',
+    dataIndex: 'paymentMethod',
+    render: ({ record }: any) => paymentMethodMap[record.paymentMethod] || record.paymentMethod
   },
-  { 
-    title: '订单状态', 
-    dataIndex: 'orderStatus', 
-    render: ({ record }: any) => orderStatusMap[record.orderStatus] || record.orderStatus 
+  {
+    title: '订单状态',
+    dataIndex: 'orderStatus',
+    render: ({ record }: any) => orderStatusMap[record.orderStatus] || record.orderStatus
   },
-  { title: '关联的学生会员卡ID', dataIndex: 'stuCardId', slotName: 'stuCardId' },
   { title: '备注', dataIndex: 'remark', slotName: 'remark' },
-  { title: '所属机构ID', dataIndex: 'institutionId', slotName: 'institutionId' },
   {
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 160,
+    width: 240,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
     show: has.hasPermOr(['education:order:get', 'education:order:update', 'education:order:delete'])
@@ -151,11 +149,12 @@ const columns: TableInstance['columns'] = [
 // 重置
 const reset = () => {
   queryForm.orderNo = undefined
-  queryForm.stuName = undefined
+  queryForm.studentName = undefined
   queryForm.cardId = undefined
   queryForm.cardTitle = undefined
   queryForm.cardType = undefined
   queryForm.paymentType = undefined
+  queryForm.paymentMethod = undefined
   queryForm.orderStatus = undefined
   queryForm.createUser = undefined
   search()
@@ -165,6 +164,7 @@ const reset = () => {
 const onConfirm = (record: OrderResp) => {
   return handleDelete(() => confirmOrder(record.id), {
     content: `是否确认订单「${record.orderNo}」入账？`,
+    successTip: '确认入账成功',
     showModal: true
   })
 }

@@ -111,7 +111,7 @@ const {
 const columns: TableInstance['columns'] = [
   { title: '课堂名称', dataIndex: 'name', slotName: 'name',width: 180 },
   { title: '教师', dataIndex: 'teacherName', width: 60 },
-  { title: '开始时间', dataIndex: 'startTime', slotName: 'startTime', width: 120,align: 'center' },
+  { title: '开始时间', dataIndex: 'startTime', slotName: 'startTime', width: 170, align: 'center' },
   // { title: '时长(分钟)', dataIndex: 'duration', width: 80, align: 'center' },
   { title: '座位数', dataIndex: 'seatNum', slotName: 'seatNum', width: 80, align: 'center' },
   // { title: '是否录制', dataIndex: 'recordState', slotName: 'recordState', width: 80, align: 'center' },

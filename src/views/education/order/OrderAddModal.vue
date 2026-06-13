@@ -45,15 +45,8 @@ const columns: ColumnItem[] = reactive([
     span: 24,
   },
   {
-    label: '支付方式（wechat:微信支付, alipay:支付宝）',
+    label: '支付方式',
     field: 'paymentType',
-    type: 'input',
-    span: 24,
-    required: true,
-  },
-  {
-    label: '创建人',
-    field: 'createUser',
     type: 'input',
     span: 24,
     required: true,

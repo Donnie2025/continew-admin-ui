@@ -3,15 +3,13 @@
     <a-descriptions :column="2" size="large" class="general-description">
       <a-descriptions-item label="ID">{{ dataDetail?.id }}</a-descriptions-item>
       <a-descriptions-item label="订单编号">{{ dataDetail?.orderNo }}</a-descriptions-item>
-      <a-descriptions-item label="学生ID">{{ dataDetail?.stuId }}</a-descriptions-item>
-      <a-descriptions-item label="学生姓名">{{ dataDetail?.stuName }}</a-descriptions-item>
+      <a-descriptions-item label="学生ID">{{ dataDetail?.studentId }}</a-descriptions-item>
+      <a-descriptions-item label="学生姓名">{{ dataDetail?.studentName }}</a-descriptions-item>
       <a-descriptions-item label="会员卡ID">{{ dataDetail?.cardId }}</a-descriptions-item>
       <a-descriptions-item label="会员卡标题">{{ dataDetail?.cardTitle }}</a-descriptions-item>
-      <a-descriptions-item label="会员卡类型（TL:次卡有限期 TU:次卡无限期 BL:储蓄卡有限期 BU:储蓄卡无限期）">{{ dataDetail?.cardType }}</a-descriptions-item>
       <a-descriptions-item label="订单金额">{{ dataDetail?.orderPrice }}</a-descriptions-item>
-      <a-descriptions-item label="支付方式（wechat:微信支付, alipay:支付宝）">{{ dataDetail?.paymentType }}</a-descriptions-item>
-      <a-descriptions-item label="订单状态（PENDING:待确认, COMPLETED:已完成, CANCELLED:已取消）">{{ dataDetail?.orderStatus }}</a-descriptions-item>
-      <a-descriptions-item label="关联的学生会员卡ID（下单时创建空白卡）">{{ dataDetail?.stuCardId }}</a-descriptions-item>
+      <a-descriptions-item label="支付方式">{{ dataDetail?.paymentType }}</a-descriptions-item>
+      <a-descriptions-item label="订单状态">{{ dataDetail?.orderStatus }}</a-descriptions-item>
       <a-descriptions-item label="支付时间">{{ dataDetail?.paymentTime }}</a-descriptions-item>
       <a-descriptions-item label="确认时间">{{ dataDetail?.confirmTime }}</a-descriptions-item>
       <a-descriptions-item label="备注">{{ dataDetail?.remark }}</a-descriptions-item>
@@ -19,9 +17,7 @@
       <a-descriptions-item label="创建时间">{{ dataDetail?.createTime }}</a-descriptions-item>
       <a-descriptions-item label="更新时间">{{ dataDetail?.updateTime }}</a-descriptions-item>
       <a-descriptions-item label="创建人">{{ dataDetail?.createUser }}</a-descriptions-item>
-      <a-descriptions-item label="创建人">{{ dataDetail?.createUserString }}</a-descriptions-item>
       <a-descriptions-item label="修改人">{{ dataDetail?.updateUser }}</a-descriptions-item>
-      <a-descriptions-item label="修改人">{{ dataDetail?.updateUserString }}</a-descriptions-item>
     </a-descriptions>
   </a-drawer>
 </template>

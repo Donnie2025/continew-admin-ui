@@ -132,3 +132,8 @@ export function syncCloudFolders(data: SyncCloudFoldersReq) {
 export function syncCloudData(ids: string[]) {
   return http.post<number>(`${BASE_URL}/sync-cloud-data`, ids)
 }
+
+/** @desc 同步飞书文件夹token */
+export function syncFeishu(id: string, recursive: boolean = false) {
+  return http.post<{ total: number; success: number; failed: number; details: string[] }>(`${BASE_URL}/${id}/sync-feishu`, { recursive })
+}

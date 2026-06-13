@@ -5,13 +5,15 @@ const BASE_URL = '/education/order'
 export interface OrderResp {
   id: string
   orderNo: string
-  stuId: string
-  stuName: string
+  studentId: string
+  studentName: string
   cardId: string
   cardTitle: string
   cardType: string
   orderPrice: string
   paymentType: string
+  paymentChannelName: string
+  paymentMethod: string
   orderStatus: string
   stuCardId: string
   remark: string
@@ -25,13 +27,15 @@ export interface OrderResp {
 export interface OrderDetailResp {
   id: string
   orderNo: string
-  stuId: string
-  stuName: string
+  studentId: string
+  studentName: string
   cardId: string
   cardTitle: string
   cardType: string
   orderPrice: string
   paymentType: string
+  paymentChannelName: string
+  paymentMethod: string
   orderStatus: string
   stuCardId: string
   paymentTime: string
@@ -47,11 +51,12 @@ export interface OrderDetailResp {
 }
 export interface OrderQuery {
   orderNo: string | undefined
-  stuName: string | undefined
+  studentName: string | undefined
   cardId: string | undefined
   cardTitle: string | undefined
   cardType: string | undefined
   paymentType: string | undefined
+  paymentMethod: string | undefined
   orderStatus: string | undefined
   createUser: string | undefined
   sort: Array<string>

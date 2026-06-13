@@ -139,7 +139,7 @@
                 </span>
               </template>
             </a-table-column>
-            <a-table-column v-if="!isLessonView" title="编码" data-index="code" :width="150" />
+            <a-table-column v-if="hasBookType" title="编码" data-index="code" :width="150" />
             <a-table-column title="类型" data-index="type" :width="110">
               <template #cell="{ record }">
                 <a-tag :color="getTypeColor(record.type)" size="small">{{ getTypeLabel(record.type) }}</a-tag>
@@ -151,13 +151,13 @@
                 <a-tag size="small" :color="record.isShow ? 'green' : 'gray'">{{ record.isShow ? '是' : '否' }}</a-tag>
               </template>
             </a-table-column>
-            <a-table-column title="操作" :width="260" fixed="right" align="center">
+            <a-table-column title="操作" :width="280" fixed="right" align="center">
               <template #cell="{ record }">
                 <a-space>
-                  <a-link v-permission="['education:material:get']" @click="onDetail(record)">详情</a-link>
                   <a-link v-permission="['education:material:update']" @click="onUpdate(record)">修改</a-link>
                   <a-link @click="onManageLessons(record)">课节</a-link>
                   <a-link v-if="record.cloudId" @click="onOpenCloudBrowserById(record)">云盘</a-link>
+                  <a-link v-if="record.type !== 'LESSON'" @click="onSyncFeishu(record)">同步飞书</a-link>
                   <a-link v-permission="['education:material:delete']" status="danger" :disabled="record.disabled" @click="onDelete(record)">删除</a-link>
                 </a-space>
               </template>
@@ -184,6 +184,25 @@
     <MaterialAddModal ref="MaterialAddModalRef" @save-success="onSaveSuccess" />
     <MaterialDetailDrawer ref="MaterialDetailDrawerRef" />
     <MaterialLessonModal ref="MaterialLessonModalRef" />
+
+    <!-- 同步飞书弹窗 -->
+    <a-modal
+      v-model:visible="syncFeishuModalVisible"
+      title="同步飞书确认"
+      width="440px"
+      :mask-closable="false"
+      ok-text="确定"
+      cancel-text="取消"
+      @ok="onSyncFeishuConfirm"
+    >
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <p style="margin: 0">将同步「{{ syncFeishuRecord?.name }}」到飞书</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--color-fill-2); border-radius: 4px">
+          <span style="font-size: 13px">递归同步所有子节点</span>
+          <a-switch v-model="syncFeishuRecursive" size="small" />
+        </div>
+      </div>
+    </a-modal>
 
     <!-- 云盘文件夹浏览器 -->
     <a-modal
@@ -395,7 +414,7 @@ import { Message, Modal } from '@arco-design/web-vue'
 import MaterialAddModal from './MaterialAddModal.vue'
 import MaterialDetailDrawer from './MaterialDetailDrawer.vue'
 import MaterialLessonModal from './MaterialLessonModal.vue'
-import { type MaterialResp, type MaterialQuery, addMaterial, deleteMaterial, deleteMaterials, exportMaterial, listMaterial, listAllMaterialsForTree, syncCloudFolders, syncCloudData, updateMaterial } from '@/apis/education/material'
+import { type MaterialResp, type MaterialQuery, addMaterial, deleteMaterial, deleteMaterials, exportMaterial, listMaterial, listAllMaterialsForTree, syncCloudFolders, syncCloudData, syncFeishu, updateMaterial } from '@/apis/education/material'
 import { type CloudListResp, type CloudFolderItem, getCloudTopFolderId, getCloudList, getCloudFolderList, renameCloudFolder, renameCloudFile, uploadCloudFile, createCloudFolder } from '@/apis/education/classinCloud'
 import { createFeishuFolder, findFeishuSubFolder, renameFeishuFile } from '@/apis/education/feishu'
 import { useDownload } from '@/hooks'
@@ -609,6 +628,11 @@ const isLessonView = computed(() => {
   return filteredItems.value.length > 0 && filteredItems.value.every(item => item.type === 'LESSON')
 })
 
+const hasBookType = computed(() => {
+  // 判断当前视图是否包含课本类型
+  return filteredItems.value.some(item => item.type === 'BOOK')
+})
+
 const maxSortInView = computed(() => {
   const sorts = filteredItems.value.map(item => Number(item.sort)).filter(n => !isNaN(n))
   return sorts.length ? Math.max(...sorts) : 0
@@ -810,6 +834,38 @@ const onSyncNamesToCloud = async () => {
       })
     }
   })
+}
+
+// 同步飞书弹窗状态
+const syncFeishuModalVisible = ref(false)
+const syncFeishuRecord = ref<MaterialResp | null>(null)
+const syncFeishuRecursive = ref(false)
+
+const onSyncFeishu = (record: MaterialResp) => {
+  syncFeishuRecord.value = record
+  syncFeishuRecursive.value = false
+  syncFeishuModalVisible.value = true
+}
+
+const onSyncFeishuConfirm = async () => {
+  if (!syncFeishuRecord.value) return
+  const loading = Message.loading({ content: '正在同步...', duration: 0 })
+  try {
+    const { data } = await syncFeishu(syncFeishuRecord.value.id, syncFeishuRecursive.value)
+    loading.close()
+    syncFeishuModalVisible.value = false
+    const failedMsg = data.failed > 0 ? `\n失败：${data.failed} 个` : ''
+    const detailMsg = data.details && data.details.length > 0 ? `\n\n失败详情：\n${data.details.slice(0, 5).join('\n')}${data.details.length > 5 ? `\n...还有 ${data.details.length - 5} 条` : ''}` : ''
+    Modal.success({
+      title: '同步完成',
+      content: `总计：${data.total} 个\n成功：${data.success} 个${failedMsg}${detailMsg}`,
+      okText: '知道了'
+    })
+    loadTree()
+  } catch (e: any) {
+    loading.close()
+    Message.error(e.message || '同步失败')
+  }
 }
 
 const onOpenCloudBrowser = () => {
