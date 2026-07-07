@@ -99,7 +99,7 @@ const filteredMaterials = computed(() => {
   const kw = searchKeyword.value.trim().toLowerCase()
   return allMaterials.value.filter(m => {
     if (m.type !== 'BOOK') return false
-    if (agentCode.value === 'youyan' && !m.name.startsWith('【H')) return false
+    if (agentCode.value === 'youyan' && !m.name.startsWith('【H') && !m.name.startsWith('【C')) return false
     return !kw || m.name.toLowerCase().includes(kw)
   })
 })

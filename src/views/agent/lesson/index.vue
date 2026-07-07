@@ -46,9 +46,10 @@
 
       <template #action="{ record }">
         <a-space>
-           <a-link title="教材" @click="onSetMaterial(record as AgentLessonResp)">设置教材</a-link>
+          <a-link title="教材" @click="onSetMaterial(record as AgentLessonResp)">设置教材</a-link>
           <a-link v-permission="['agent:lesson:update']" title="修改" @click="onUpdate(record as AgentLessonResp)">修改</a-link>
-          <a-link v-permission="['agent:lesson:get']" title="详情" @click="onDetail(record as AgentLessonResp)">详情</a-link>
+<!--          <a-link v-permission="['agent:lesson:get']" title="详情" @click="onDetail(record as AgentLessonResp)">详情</a-link>-->
+          <a-link title="删除" status="danger" @click="onDelete(record as AgentLessonResp)">删除</a-link>
         </a-space>
       </template>
     </GiTable>
@@ -64,10 +65,11 @@
 
 <script setup lang="ts">
 import type { TableInstance } from '@arco-design/web-vue'
+import { Modal, Message } from '@arco-design/web-vue'
 import LessonAddModal from './AgentLessonUpdateModal.vue'
 import LessonDetailDrawer from './LessonDetailDrawer.vue'
 import LessonMaterialModal from './LessonMaterialModal.vue'
-import { type AgentLessonResp, listAgentLessons } from '@/apis/agent/lesson'
+import { type AgentLessonResp, listAgentLessons, deleteAgentLesson } from '@/apis/agent/lesson'
 import { useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
@@ -150,6 +152,26 @@ const onDetail = (record: AgentLessonResp) => {
 const LessonMaterialModalRef = ref<InstanceType<typeof LessonMaterialModal>>()
 const onSetMaterial = (record: AgentLessonResp) => {
   LessonMaterialModalRef.value?.onOpen(record.id, record.name, record.courseId, record.materialId ?? null, record.materialName ?? null)
+}
+
+// 删除
+const onDelete = (record: AgentLessonResp) => {
+  Modal.warning({
+    title: '提示',
+    content: `确定要删除课堂 "${record.name}" 吗？`,
+    hideCancel: false,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await deleteAgentLesson(record.id)
+        Message.success('删除成功')
+        search()
+      } catch (error) {
+        console.error('删除失败:', error)
+      }
+    }
+  })
 }
 </script>
 

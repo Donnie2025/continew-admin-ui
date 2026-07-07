@@ -309,9 +309,14 @@ const onAdd = async () => {
 const onUpdate = async (id: string) => {
   reset()
   dataId.value = id
-  const { data } = await getStudent(id)
-  Object.assign(form, data)
-  visible.value = true
+  try {
+    const { data } = await getStudent(id)
+    Object.assign(form, data)
+    visible.value = true
+  } catch (error) {
+    console.error('获取学生信息失败', error)
+    Message.error('获取学生信息失败，请稍后重试')
+  }
 }
 
 defineExpose({ onAdd, onUpdate })

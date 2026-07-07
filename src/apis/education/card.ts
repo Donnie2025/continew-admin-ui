@@ -1,6 +1,6 @@
 import http from '@/utils/http'
 
-const BASE_URL = '/education/card'
+const BASE_URL = '/api/education/card'
 
 export interface CardResp {
   id: string
@@ -61,6 +61,11 @@ export function getCard(id: string) {
 
 /** @desc 查询所有状态为1的会员卡 */
 export function listActiveCards() {
+  return http.get<CardResp[]>(`${BASE_URL}/active`)
+}
+
+/** @desc 获取可用会员卡列表（用于绑卡） */
+export function getAvailableCards() {
   return http.get<CardResp[]>(`${BASE_URL}/active`)
 }
 

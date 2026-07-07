@@ -63,20 +63,23 @@
       <template #activeCards="{ record }">
         <span v-if="!record.activeCards || record.activeCards.length === 0" style="color: var(--color-text-3)">-</span>
         <a-space v-else wrap :size="4">
-          <a-tooltip
-            v-for="(card, idx) in record.activeCards"
-            :key="idx"
-            :content="`到期: ${card.expireDate ?? '永久'}`"
-          >
-            <a-tag color="arcoblue" size="small">
-              {{ card.cardName }} ({{ ['TL','TU'].includes(card.cardType) ? card.balance + '次' : '₱' + card.balance }})
-            </a-tag>
-          </a-tooltip>
+          <span v-for="(card, idx) in record.activeCards" :key="idx">
+            {{ ['TL','TU'].includes(card.cardType) ? card.balance + '次' : card.balance }}
+          </span>
         </a-space>
       </template>
       <template #enableRecording="{ record }">
         <a-tag v-if="record.enableRecording === 1" color="green">允许录课</a-tag>
         <a-tag v-else color="gray">不允许录课</a-tag>
+      </template>
+      <template #paidBalance="{ record }">
+        <span :style="{
+          color: record.paidBalance > 0 ? 'rgb(var(--success-6))' : 'var(--color-text-3)',
+          fontWeight: record.paidBalance > 0 ? 600 : 400,
+          fontSize: record.paidBalance > 0 ? '15px' : '14px'
+        }">
+          {{ (record.paidBalance || 0).toFixed(0) }}
+        </span>
       </template>
       <template #name="{ record }">
         <span style="display: flex; align-items: center; gap: 8px;">
@@ -97,18 +100,31 @@
       </template>
       <template #action="{ record }">
         <a-space>
-          <a-link v-permission="['education:student:get']" title="详情" @click="onDetail(record)">详情</a-link>
-          <a-link v-permission="['education:student:update']" title="修改" @click="onUpdate(record)">修改</a-link>
-          <a-link v-permission="['education:student:update']" title="设置密码" @click="onSetPassword(record)">设置密码</a-link>
-          <a-link
-            v-permission="['education:student:delete']"
-            status="danger"
-            :disabled="record.disabled"
-            :title="record.disabled ? '不可删除' : '删除'"
-            @click="onDelete(record)"
-          >
-            删除
-          </a-link>
+          <a-link v-permission="['education:student:get']" @click="onDetail(record)">查看</a-link>
+          <a-dropdown trigger="hover">
+            <a-link>
+              更多
+              <icon-down />
+            </a-link>
+            <template #content>
+              <a-doption v-permission="['education:student:update']" @click="onUpdate(record)">
+                <icon-edit />
+                修改
+              </a-doption>
+              <a-doption v-permission="['education:student:update']" @click="onSetPassword(record)">
+                <icon-lock />
+                设置密码
+              </a-doption>
+              <a-doption
+                v-permission="['education:student:delete']"
+                :disabled="record.disabled"
+                @click="onDelete(record)"
+              >
+                <icon-delete />
+                <span :style="{ color: record.disabled ? '' : 'rgb(var(--danger-6))' }">删除</span>
+              </a-doption>
+            </template>
+          </a-dropdown>
         </a-space>
       </template>
     </GiTable>
@@ -118,6 +134,8 @@
     <StudentBatchImportModal ref="StudentBatchImportModalRef" @import-success="search" />
     <StudentSetPasswordModal ref="StudentSetPasswordModalRef" @save-success="search" />
     <StudentEditNameModal ref="StudentEditNameModalRef" @save-success="search" />
+    <StudentAdjustBalanceModal ref="StudentAdjustBalanceModalRef" @save-success="search" />
+    <StudentBalanceRecordsDrawer ref="StudentBalanceRecordsDrawerRef" />
   </div>
 </template>
 
@@ -128,13 +146,15 @@ import StudentDetailDrawer from './StudentDetailDrawer.vue'
 import StudentBatchImportModal from './StudentBatchImportModal.vue'
 import StudentSetPasswordModal from './StudentSetPasswordModal.vue'
 import StudentEditNameModal from './StudentEditNameModal.vue'
+import StudentAdjustBalanceModal from './StudentAdjustBalanceModal.vue'
+import StudentBalanceRecordsDrawer from './StudentBalanceRecordsDrawer.vue'
 import { type StudentResp, type StudentQuery, deleteStudent, exportStudent, listStudent } from '@/apis/education/student'
 import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
-import { IconEye, IconEdit } from '@arco-design/web-vue/es/icon'
+import { IconDown, IconEye, IconEdit, IconHistory, IconLock, IconDelete } from '@arco-design/web-vue/es/icon'
 
 defineOptions({ name: 'Student' })
 
@@ -157,14 +177,15 @@ const {
   handleDelete
 } = useTable((page) => listStudent({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
-  { title: 'ID', dataIndex: 'id', slotName: 'id' },
-  { title: '学生姓名', dataIndex: 'name', slotName: 'name' },
-  { title: '代理商编码', dataIndex: 'agentCode', width: 130, ellipsis: true, tooltip: true },
-  { title: '头像', dataIndex: 'avatar', slotName: 'avatar' },
-  { title: '手机号码', dataIndex: 'phone', slotName: 'phone' },
-  { title: '会员卡', dataIndex: 'activeCards', slotName: 'activeCards', width: 200 },
-  { title: '是否允许录课', dataIndex: 'enableRecording', slotName: 'enableRecording' },
-  { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime' },
+  // { title: 'ID', dataIndex: 'id', slotName: 'id' },
+  { title: '学生姓名', dataIndex: 'name', slotName: 'name',width: 150 },
+  { title: '代理商编码', dataIndex: 'agentCode', width: 100, ellipsis: true, tooltip: true },
+  { title: '头像', dataIndex: 'avatar', slotName: 'avatar', width: 70 },
+  { title: '手机号码', dataIndex: 'phone', slotName: 'phone',width: 130 },
+  { title: '余额', dataIndex: 'paidBalance', slotName: 'paidBalance', width: 120, align: 'center' },
+  // { title: '会员卡', dataIndex: 'activeCards', slotName: 'activeCards', width: 200 },
+  // { title: '是否允许录课', dataIndex: 'enableRecording', slotName: 'enableRecording' },
+  { title: '注册时间', dataIndex: 'registerTime', slotName: 'registerTime',width: 180 },
   {
     title: '操作',
     dataIndex: 'action',
@@ -230,6 +251,23 @@ const StudentEditNameModalRef = ref<InstanceType<typeof StudentEditNameModal>>()
 // 修改姓名
 const onEditName = (record: StudentResp) => {
   StudentEditNameModalRef.value?.onOpen(record.id, record.name)
+}
+
+const StudentAdjustBalanceModalRef = ref<InstanceType<typeof StudentAdjustBalanceModal>>()
+// 充值
+const onRecharge = (record: StudentResp) => {
+  StudentAdjustBalanceModalRef.value?.onOpen(record.id, record.name, record.paidBalance || 0, 'RECHARGE')
+}
+
+// 扣费
+const onDeduct = (record: StudentResp) => {
+  StudentAdjustBalanceModalRef.value?.onOpen(record.id, record.name, record.paidBalance || 0, 'DEDUCT')
+}
+
+const StudentBalanceRecordsDrawerRef = ref<InstanceType<typeof StudentBalanceRecordsDrawer>>()
+// 查看操作记录
+const onViewRecords = (record: StudentResp) => {
+  StudentBalanceRecordsDrawerRef.value?.onOpen(record.id, record.name)
 }
 </script>
 

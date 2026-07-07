@@ -63,52 +63,47 @@
         <!-- 添加星期几显示行 -->
         <div class="weekday-header">
           <div v-for="day in weekDays" :key="day.date" class="weekday-cell">
-            <div class="weekday-name">{{ day.label }}</div>
+            <span class="weekday-name">{{ day.label }}</span>
+            <span class="date-label">{{ day.date }}</span>
           </div>
         </div>
         <div class="week-header">
           <div v-for="day in weekDays" :key="day.date" class="day-column">
-            <div class="date-label">{{ day.date }}</div>
           </div>
         </div>
         <div class="time-grid">
-            <!-- 对每个时间槽，只有当时间槽在某天有数据时才显示 -->
-          <div v-for="timeSlot in timeSlots" :key="timeSlot" class="time-row">
-              <!-- 判断这个时间是否在任何日期有课时 -->
-              <template v-if="hasAnySlotInWeek(timeSlot)">
-            <div v-for="(day, dayIndex) in 7" :key="day" class="time-cell">
-                  <!-- 只在有数据的情况下才显示格子 -->
-              <div
-                    v-if="hasSlotOnDay(timeSlot, dayIndex)"
-                class="slot-card"
-                    :class="[
-                      getSlotInfo(timeSlot, dayIndex).status,
-                      {'online-slot': isSlotOnline(timeSlot, dayIndex)},
-                      {'offline-slot': !isSlotOnline(timeSlot, dayIndex)}
-                    ]"
-                    @click="handleCourseClick(timeSlot, dayIndex)"
-              >
-                <span class="status-bar" :class="getSlotInfo(timeSlot, dayIndex).status"></span>
-                <span class="slot-content">
-                  <span class="slot-time">{{ timeSlot }}</span>
-                  <a-tooltip v-if="getSlotInfo(timeSlot, dayIndex).studentName" :content="getSlotInfo(timeSlot, dayIndex).studentName.split('\n').join(', ')">
-                    <span class="slot-student" v-html="getSlotInfo(timeSlot, dayIndex).studentName.replace(/\n/g, '<br>')"></span>
-                  </a-tooltip>
-                </span>
+          <!-- 按天列布局，每一天独立显示自己的时间槽 -->
+          <div class="day-columns">
+            <div v-for="(day, dayIndex) in 7" :key="dayIndex" class="day-column-slots">
+              <div v-for="slot in getDaySlots(dayIndex)" :key="slot.time" class="time-slot-item">
+                <div
+                  class="slot-card"
+                  :class="[
+                    slot.status,
+                    {'online-slot': slot.isOnline},
+                    {'offline-slot': !slot.isOnline}
+                  ]"
+                  @click="handleCourseClick(slot.time, dayIndex)"
+                >
+                  <span class="status-bar" :class="slot.status"></span>
+                  <span class="slot-content">
+                    <span class="slot-time">{{ slot.time }}</span>
+                    <a-tooltip v-if="slot.studentName" :content="slot.studentName.split('\n').join(', ')">
+                      <span class="slot-student" v-html="slot.studentName.replace(/\n/g, '<br>')"></span>
+                    </a-tooltip>
+                  </span>
+                </div>
               </div>
-                  <!-- 没有数据时显示空白 -->
-                  <div v-else class="slot-empty"></div>
-            </div>
-              </template>
             </div>
           </div>
-          
+
           <!-- 添加说明信息 -->
           <div v-if="timeSlots.length === 0" class="no-data-message">
             <a-empty description="该教师在当前日期范围内没有可用课时" />
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -1288,13 +1283,13 @@ const processDateRange = (dateRange: any[]): string[] => {
 const hasSlotOnDay = (timeSlot: string, dayIndex: number): boolean => {
   const day = weekDays.value[dayIndex]
   if (!day) return false
-  
+
   // 将当前日期格式化为YYYYMMDD格式
   const formattedDate = dayjs(day.fullDate).format('YYYYMMDD')
-  
+
   // 检查是否有匹配的课程
-  return courseSlots.some(slot => 
-    slot.startTime === timeSlot && 
+  return courseSlots.some(slot =>
+    slot.startTime === timeSlot &&
     slot.startDate === formattedDate
   )
 }
@@ -1303,6 +1298,39 @@ const hasSlotOnDay = (timeSlot: string, dayIndex: number): boolean => {
 const hasAnySlotInWeek = (timeSlot: string): boolean => {
   // 检查是否有任何一天在这个时间点有课程
   return courseSlots.some(slot => slot.startTime === timeSlot);
+}
+
+// 获取某一天的所有时间槽（按时间排序）
+const getDaySlots = (dayIndex: number) => {
+  const day = weekDays.value[dayIndex]
+  if (!day) return []
+
+  const formattedDate = dayjs(day.fullDate).format('YYYYMMDD')
+
+  // 获取这一天的所有课程槽
+  const daySlots = courseSlots.filter(slot => slot.startDate === formattedDate)
+
+  // 按时间排序并转换为显示格式
+  return daySlots
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .map(slot => {
+      const hasStudents = (slot.studentNameList && slot.studentNameList.length > 0) ||
+                         (slot.studentName && slot.studentName !== '未被预约');
+
+      let displayName = '未被预约';
+      if (slot.studentNameList && slot.studentNameList.length > 0) {
+        displayName = slot.studentNameList.join('\n');
+      } else if (slot.studentName && slot.studentName !== '未被预约') {
+        displayName = slot.studentName;
+      }
+
+      return {
+        time: slot.startTime,
+        status: hasStudents ? 'booked' : 'available',
+        studentName: displayName,
+        isOnline: !!slot.isOnline
+      }
+    })
 }
 
 // 判断课时是否为在线课程
@@ -1684,7 +1712,7 @@ const handleDeleteCourse = () => {
 }
 
 .teacher-list {
-  width: 240px;
+  width: 150px;
   padding: 16px 0;
   background: #fff;
   border-right: 1px solid var(--color-border);
@@ -1772,35 +1800,22 @@ const handleDeleteCourse = () => {
   background: #fff;
   padding: 0 6px; /* 添加左右内边距，与time-grid对齐 */
   margin-bottom: 0;
-  
+  border-bottom: 1px solid var(--color-border);
+
   .weekday-cell {
     padding: 10px 0 6px 0;
     text-align: center;
-    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
     .weekday-name {
       font-weight: 700;
       font-size: 16px;
       color: #333;
     }
-  }
-}
 
-.week-header {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列布局 */
-  grid-gap: 0 6px; /* 与time-row保持一致的列间距 */
-  border-bottom: 1px solid var(--color-border);
-  background: #fff;
-  border-radius: 20px 20px 0 0;
-  overflow: hidden;
-  margin-bottom: 6px;
-  padding: 0 6px; /* 添加左右内边距，与time-grid对齐 */
-  
-  .day-column {
-    padding: 6px 0;
-    text-align: center;
-    border-right: none; /* 移除右边框，改用grid-gap */
-    
     .date-label {
       color: var(--color-text-3);
       font-size: 13px;
@@ -1808,44 +1823,41 @@ const handleDeleteCourse = () => {
   }
 }
 
+.week-header {
+  display: none; /* 隐藏原来的日期行 */
+}
+
 .time-grid {
-  padding: 8px 6px; /* 增加左右内边距 */
+  padding: 8px 6px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  
-  .time-row {
+  overflow-y: auto;
+
+  .day-columns {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7列布局 */
-    grid-gap: 0 6px; /* 添加列间距 */
-    border-bottom: 1px solid var(--color-border);
-    min-height: 36px;
-    align-items: stretch;
-    background: #fff;
-    margin-bottom: 10px;
-    &:last-child {
-      margin-bottom: 0;
-      border-bottom: none;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-gap: 0 6px;
+    align-items: start;
+    width: 100%;
   }
-  }
-  
-  .time-cell {
-    min-height: 36px;
-    border-right: none; /* 移除右边框，改用grid-gap */
-    padding: 2px;
-    position: relative;
-    background: #fff;
+
+  .day-column-slots {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 36px;
+  }
+
+  .time-slot-item {
+    width: 100%;
   }
 }
 
 .slot-card {
   display: flex;
-  align-items: flex-start; /* 改为顶部对齐，以适应内容换行 */
-  justify-content: flex-start;
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: center; /* 水平居中对齐 */
   min-height: 32px;
   height: auto;
   border-radius: 4px;
@@ -1855,51 +1867,51 @@ const handleDeleteCourse = () => {
   cursor: pointer;
   transition: all 0.25s ease;
   position: relative;
-  padding: 4px 6px 4px 10px;
+  padding: 4px 4px 4px 4px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
-  
+
   /* 根据屏幕大小调整展示方式 */
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: flex-start;
     padding: 4px 4px 4px 8px;
-    
+
     .slot-time {
       font-size: 13px;
     }
-    
+
     .slot-student {
       font-size: 11px;
       margin-left: 0;
     }
   }
-  
+
   &.online-slot {
     border-left: 4px solid #52c41a;
   }
-  
+
   &.offline-slot {
     border-left: 4px solid #f5222d;
   }
-  
+
   .status-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
     width: 3px;
-    height: 70%;
-    border-radius: 1px;
-    margin-right: 6px;
+    border-radius: 1px 0 0 1px;
     background: #bcbcbc;
-    flex-shrink: 0;
-    margin-top: 5px; /* 添加顶部边距，使状态条与文本顶部对齐 */
   }
   
   .slot-content {
     display: flex;
-    flex-direction: column; /* 改为纵向排列，时间在上，学生名在下 */
-    align-items: center; /* 居中对齐 */
-    gap: 2px;
+    flex-direction: row; /* 横向排列，时间在左，学生名在右 */
+    align-items: center; /* 垂直居中对齐 */
+    gap: 8px;
     font-size: 14px;
     color: #fff;
     font-weight: 500;
@@ -1907,33 +1919,25 @@ const handleDeleteCourse = () => {
     min-width: 0;
     max-width: 100%;
     flex: 1;
-    text-align: center; /* 文本居中 */
+    justify-content: center; /* 居中对齐 */
   }
-  
+
   .slot-time {
     font-weight: 600;
     font-size: 14px;
     flex-shrink: 0;
-    margin-bottom: 4px; /* 增加与学生姓名之间的间距 */
-    color: rgba(255, 255, 255, 0.9); /* 略微降低不透明度，使其与学生姓名区分 */
+    color: #fff;
+    white-space: nowrap; /* 时间不换行 */
   }
-  
+
   .slot-student {
-    margin-left: 0; /* 移除左边距 */
     font-size: 13px;
     font-weight: 500;
     flex-shrink: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px; /* 增加最大宽度，以便显示更多学生姓名 */
-    white-space: normal; /* 允许文本换行 */
-    word-break: break-word; /* 在单词内部换行 */
-    line-height: 1.2; /* 减小行高，使多行文本更紧凑 */
-    max-height: 3.6em; /* 限制最大高度，约显示3行 */
-    display: -webkit-box;
-    -webkit-line-clamp: 3; /* 最多显示3行 */
-    -webkit-box-orient: vertical;
-    text-align: center; /* 文本居中 */
+    white-space: nowrap; /* 单行显示，超出省略 */
+    min-width: 0;
   }
   
   &.available {
@@ -1976,19 +1980,6 @@ const handleDeleteCourse = () => {
     box-shadow: 0 4px 12px 0 rgba(0,0,0,0.15);
     transform: translateY(-2px);
   }
-}
-
-/* 空白单元格样式 */
-.slot-empty {
-  min-height: 32px;
-  height: auto;
-  width: 100%;
-  margin: 0;
-  box-sizing: border-box;
-  border-radius: 4px;
-  background: #fafafa;
-  border: 1px dashed #e0e0e0;
-  flex: 1;
 }
 
 .course-detail {

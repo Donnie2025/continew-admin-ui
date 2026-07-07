@@ -17,7 +17,7 @@
       @refresh="search"
     >
       <template #toolbar-left>
-	    <a-input-search v-model="queryForm.teacherName" placeholder="请输入教师姓名" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.teacherName" placeholder="请输入教师姓名" allow-clear @search="search" @press-enter="search" />
         <a-button-group>
           <a-button @click="previousWeek">
             <template #icon><icon-left /></template>
@@ -69,10 +69,10 @@
         </a-button>
       </template>
       <template #toolbar-right>
-        <a-button v-permission="['education:salary:create']" type="primary" @click="onAdd">
-          <template #icon><icon-plus /></template>
-          <template #default>新增</template>
-        </a-button>
+<!--        <a-button v-permission="['education:salary:create']" type="primary" @click="onAdd">-->
+<!--          <template #icon><icon-plus /></template>-->
+<!--          <template #default>新增</template>-->
+<!--        </a-button>-->
         <a-button v-permission="['education:salary:create']" type="outline" status="success" @click="onBatchImport">
           <template #icon><icon-import /></template>
           <template #default>批量导入</template>
@@ -240,11 +240,11 @@ onMounted(() => {
 
 const columns: TableInstance['columns'] = [
   { title: 'Start Date', dataIndex: 'startDate', slotName: 'startDate' },
-  { title: 'End Date', dataIndex: 'endDate', slotName: 'endDate' },
+  // { title: 'End Date', dataIndex: 'endDate', slotName: 'endDate' },
   { title: 'Recv Name', dataIndex: 'recvName', slotName: 'recvName' },
   { title: 'Name', dataIndex: 'teacherName', slotName: 'teacherName' },
-  { title: 'Course Count', dataIndex: 'courseCount', slotName: 'courseCount' },
-  { title: 'Course Amt', dataIndex: 'courseAmount', slotName: 'courseAmount' },
+  { title: 'Count', dataIndex: 'courseCount', slotName: 'courseCount' },
+  { title: 'Amt', dataIndex: 'courseAmount', slotName: 'courseAmount' },
   { title: 'Deduction', dataIndex: 'deductionAmount', slotName: 'deductionAmount' },
   { title: 'Final Amt', dataIndex: 'finalAmount', slotName: 'finalAmount' },
   { title: 'Is Settled', dataIndex: 'isSettled', slotName: 'isSettled' },

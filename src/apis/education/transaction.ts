@@ -1,6 +1,6 @@
 import http from '@/utils/http'
 
-const BASE_URL = '/education/transaction'
+const BASE_URL = '/api/education/transaction'
 
 export interface TransactionResp {
   id: string
@@ -47,7 +47,7 @@ export interface TransactionDetailResp {
   updateUserString: string
 }
 export interface TransactionQuery {
-  stuId: string | undefined
+  studentId: string | undefined
   cardId: string | undefined
   type: string | undefined
   sort: Array<string>

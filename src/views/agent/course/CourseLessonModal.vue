@@ -1001,7 +1001,7 @@ defineExpose({
 .time-cell {
   width: 150px;
   flex-shrink: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .duration-cell {

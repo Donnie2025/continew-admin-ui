@@ -1,6 +1,6 @@
 import http from '@/utils/http'
 
-const BASE_URL = '/api/mini/payment-channel'
+const BASE_URL = '/api/education/payment-channel'
 
 export interface PaymentChannelResp {
   id: number
@@ -15,5 +15,5 @@ export interface PaymentChannelResp {
 
 /** @desc 查询可用支付渠道列表 */
 export function listActiveChannels() {
-  return http.get<PaymentChannelResp[]>(`${BASE_URL}/list`)
+  return http.get<PaymentChannelResp[]>(`${BASE_URL}/active`)
 }

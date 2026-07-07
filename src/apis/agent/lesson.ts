@@ -98,7 +98,7 @@ export function updateAgentLesson(data: AgentLessonReq, id: string) {
 /** @desc 删除代理课节 */
 export function deleteAgentLesson(id: string | string[]) {
   const ids = Array.isArray(id) ? id : [id]
-  return http.del(BASE_URL, { ids })
+  return http.del(BASE_URL, ids)
 }
 
 /** @desc 获取班级关联的教材ID */

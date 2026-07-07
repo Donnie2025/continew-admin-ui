@@ -1,6 +1,6 @@
 import http from '@/utils/http'
 
-const BASE_URL = '/education/stuCard'
+const BASE_URL = '/api/education/stuCard'
 
 export interface StuCardResp {
   id: string

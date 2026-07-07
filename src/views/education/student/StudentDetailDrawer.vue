@@ -5,8 +5,10 @@
         <span>会员详情</span>
       </div>
     </template>
-    <!-- 顶部：头像与基础信息 -->
-    <div class="student-header">
+
+    <a-spin :loading="loading" style="width: 100%">
+      <!-- 顶部：头像与基础信息 -->
+      <div class="student-header">
       <div class="student-header-left">
         <img
           v-if="dataDetail?.avatar || dataDetail?.headImg"
@@ -41,75 +43,98 @@
       </div>
     </div>
 
-    <!-- 会员卡列表 -->
+    <!-- 会员账户 -->
     <div class="card-list-section">
       <div class="card-list-title">持有会员卡</div>
       <a-table
-        :data="cardList"
+        v-if="accountList.length > 0"
+        :data="accountList"
+        :columns="accountColumns"
         :pagination="false"
-        size="small"
-        :bordered="false"
-        class="card-table"
-        row-key="id"
+        :bordered="{ cell: true }"
+        size="medium"
+        class="account-table"
       >
-        <a-table-column title="卡名称" data-index="cardName" />
-        <a-table-column title="卡类型" data-index="cardType">
-          <template #cell="{ record }">
-            {{ getCardTypeName(record.cardType) }}
-          </template>
-        </a-table-column>
-        <a-table-column title="余额" data-index="balance">
-          <template #cell="{ record }">
-            {{ record.balance }}次
-          </template>
-        </a-table-column>
-        <a-table-column title="到期时间" data-index="expireDate" />
-        <a-table-column title="激活/停用" data-index="cardStatus">
-          <template #cell="{ record }">
-            <a-switch v-model="record.cardStatus" :checked-value="1" :unchecked-value="0" disabled />
-          </template>
-        </a-table-column>
-        <a-table-column title="操作">
-          <template #cell="{ record }">
-            <a-space>
-              <a-button type="primary" size="mini">充值</a-button>
-              <a-button size="mini">扣费</a-button>
-              <a-button size="mini">操作记录</a-button>
-            </a-space>
-          </template>
-        </a-table-column>
+        <template #accountTypeName="{ record }">
+          <a-tag :color="getAccountTypeColor(record.accountType)">
+            {{ record.accountTypeName }}
+          </a-tag>
+        </template>
+        <template #balance="{ record }">
+          <span class="balance-text">{{ record.balance || 0 }}节</span>
+        </template>
+        <template #expireDate="{ record }">
+          <span v-if="record.expireDate">{{ record.expireDate }}</span>
+          <span v-else class="expire-permanent">永久使用</span>
+        </template>
+        <template #status="{ record }">
+          <a-switch :model-value="record.status === 1" disabled />
+        </template>
+        <template #action="{ record }">
+          <a-space>
+            <a-button type="primary" size="small" @click="onRecharge(record)">充值</a-button>
+            <a-button size="small" @click="onDeduct(record)">扣费</a-button>
+            <a-button size="small" @click="onViewRecords(record)">操作记录</a-button>
+          </a-space>
+        </template>
       </a-table>
+      <div v-else class="empty-account">
+        <span class="empty-text">暂无账户，购买课包后自动开通</span>
+      </div>
     </div>
 
     <!-- 消费记录Tab -->
     <div class="transaction-section">
       <a-tabs v-model:active-key="activeTab" type="line">
         <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="book_debit" title="约课扣费" />
-        <a-tab-pane key="cancel" title="取消约课" />
-        <a-tab-pane key="credit" title="充值" />
-        <a-tab-pane key="debit" title="扣费" />
+        <a-tab-pane key="consume" title="约课扣费" />
+        <a-tab-pane key="refund" title="取消约课" />
+        <a-tab-pane key="recharge" title="充值" />
+        <a-tab-pane key="adjust" title="扣费" />
         <a-tab-pane key="bind" title="首次绑卡" />
         <a-tab-pane key="other" title="其他" />
       </a-tabs>
       <a-table
         :data="filteredTransactions"
         :pagination="pagination"
-        size="small"
+        :bordered="{ cell: true }"
+        size="medium"
         class="transaction-table"
       >
-        <a-table-column title="会员卡" data-index="cardName" />
-        <a-table-column title="操作时间" data-index="createTime" />
-        <a-table-column title="操作类型" data-index="type" />
-        <a-table-column title="余额变化" :cell="balanceChangeCell" />
-        <a-table-column title="有效期变化" :cell="daysChangeCell" />
-        <a-table-column title="实收金额" data-index="creditAmount" />
-        <a-table-column title="操作人" data-index="operatorName" />
-        <a-table-column title="备注" data-index="remark" />
-        <a-table-column title="状态" :cell="statusCell" />
+        <a-table-column title="操作时间" data-index="createTime" :width="180" />
+        <a-table-column title="操作类型" data-index="type" :width="120">
+          <template #cell="{ record }">
+            {{ getTransactionTypeName(record.type) }}
+          </template>
+        </a-table-column>
+        <a-table-column title="次数" :width="100" align="center">
+          <template #cell="{ record }">
+            <span :style="{ color: getAmountColor(record) }">
+              {{ getAmountChange(record) }}
+            </span>
+          </template>
+        </a-table-column>
+        <a-table-column title="卡到期日" data-index="expireDate" :width="120" />
+        <a-table-column title="金额" data-index="actualAmount" :width="100" align="center" />
+        <a-table-column title="操作人" data-index="operatorName" :width="120" />
+        <a-table-column title="备注" data-index="remark" :min-width="150" />
+        <a-table-column title="状态" :width="100" align="center">
+          <template #cell="{ record }">
+            <a-tag :color="record.disabled ? 'gray' : 'green'">
+              {{ record.disabled ? '停用' : '激活' }}
+            </a-tag>
+          </template>
+        </a-table-column>
       </a-table>
     </div>
+    </a-spin>
   </a-drawer>
+
+  <!-- 充值/扣费模态框 -->
+  <StudentAdjustBalanceModal ref="StudentAdjustBalanceModalRef" @save-success="handleBalanceChanged" />
+
+  <!-- 操作记录抽屉 -->
+  <StudentBalanceRecordsDrawer ref="StudentBalanceRecordsDrawerRef" />
 
   <!-- 绑卡模态框 -->
   <a-modal
@@ -128,34 +153,33 @@
           @change="handleCardChange"
         >
           <a-option v-for="card in bindCardForm.cardList" :key="card.id" :value="card.id">
-            {{ card.name }}
+            {{ card.title }} - {{ card.initBalance }}节/{{ card.initDays }}天 - ¥{{ card.price }}
           </a-option>
         </a-select>
       </a-form-item>
-      
-      <a-form-item label="卡类型">
-        <a-input v-model="bindCardForm.cardTypeDisplay" placeholder="卡类型" disabled />
-      </a-form-item>
-      <a-form-item label="充值次数">
+
+      <a-form-item label="充值课时">
         <a-input-number
           v-model="bindCardForm.balance"
-          placeholder="请输入充值次数"
+          placeholder="课时数（自动从卡模板读取）"
           :min="0"
+          disabled
           style="width: 100%"
         />
       </a-form-item>
-      
-      <a-form-item v-if="!isUnlimitedCard" label="有效天数">
+
+      <a-form-item label="有效天数">
         <a-input-number
           v-model="bindCardForm.validDays"
-          placeholder="请输入有效天数"
+          placeholder="有效天数（自动从卡模板读取）"
           :min="0"
           :precision="0"
+          disabled
           style="width: 100%"
         />
       </a-form-item>
-      
-      <a-form-item label="实收金额">
+
+      <a-form-item label="实收金额" required>
         <div class="amount-input-container">
           <a-input-number
             v-model="bindCardForm.actualAmount"
@@ -166,7 +190,19 @@
           />
         </div>
       </a-form-item>
-      
+
+      <a-form-item label="支付渠道">
+        <a-select
+          v-model="bindCardForm.paymentChannelId"
+          placeholder="请选择支付渠道"
+          allow-clear
+        >
+          <a-option v-for="channel in paymentChannels" :key="channel.id" :value="channel.id">
+            {{ channel.channelName }}
+          </a-option>
+        </a-select>
+      </a-form-item>
+
       <a-form-item label="备注">
         <a-textarea
           v-model="bindCardForm.remark"
@@ -189,18 +225,58 @@ import { useWindowSize } from '@vueuse/core'
 import { ref, computed, reactive } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { getStudent } from '@/apis/education/student'
-import { getAvailableCards, addStuCard, bindStuCard } from '@/apis/education/stuCard'
+import { getAvailableCards } from '@/apis/education/card'
 import { listTransaction } from '@/apis/education/transaction'
+import { createOrder, confirmOrder } from '@/apis/education/order'
+import { getStudentAccounts } from '@/apis/education/account'
+import { listActiveChannels } from '@/apis/education/paymentChannel'
 import { useDict } from '@/hooks/app'
+import StudentAdjustBalanceModal from './StudentAdjustBalanceModal.vue'
+import StudentBalanceRecordsDrawer from './StudentBalanceRecordsDrawer.vue'
 
 const { width } = useWindowSize()
 const visible = ref(false)
 const dataId = ref('')
 const dataDetail = ref<any>({})
-const cardList = ref<any[]>([])
+const accountList = ref<any[]>([])
 const transactionList = ref<any[]>([])
 const activeTab = ref('all')
 const pagination = ref({ pageSize: 10, current: 1 })
+const loading = ref(false)
+
+const accountColumns = [
+  {
+    title: '账户类型',
+    dataIndex: 'accountTypeName',
+    width: 150,
+    slotName: 'accountTypeName',
+  },
+  {
+    title: '余额',
+    dataIndex: 'balance',
+    width: 120,
+    slotName: 'balance',
+  },
+  {
+    title: '到期时间',
+    dataIndex: 'expireDate',
+    width: 150,
+    slotName: 'expireDate',
+  },
+  {
+    title: '激活/停用',
+    dataIndex: 'status',
+    width: 120,
+    align: 'center',
+    slotName: 'status',
+  },
+  {
+    title: '操作',
+    width: 280,
+    align: 'center',
+    slotName: 'action',
+  },
+]
 
 // 获取卡类型字典
 const { card_type } = useDict('card_type')
@@ -213,24 +289,34 @@ const getCardTypeName = (type: string | number) => {
   return typeItem?.label || '未知类型'
 }
 
+// 获取账户类型颜色
+const getAccountTypeColor = (accountType: string) => {
+  const colorMap: Record<string, string> = {
+    'PAID': 'blue',
+    'GIFT': 'orange',
+    'LEAVE': 'purple',
+    'FREEZE': 'gray'
+  }
+  return colorMap[accountType] || 'blue'
+}
+
 // 绑卡模态框相关
 const showBindCardModal = ref(false)
+const paymentChannels = ref<any[]>([])
 const bindCardForm = reactive<{
   cardId: string | undefined
-  cardType: string | undefined
-  cardTypeDisplay: string | undefined
-  validDays: string | undefined
-  balance: string | undefined
+  validDays: number | undefined
+  balance: number | undefined
   actualAmount: number | undefined
+  paymentChannelId: string | undefined
   remark: string | undefined
   cardList: any[]
 }>({
   cardId: undefined,
-  cardType: undefined,
-  cardTypeDisplay: undefined,
   validDays: undefined,
   balance: undefined,
   actualAmount: undefined,
+  paymentChannelId: undefined,
   remark: undefined,
   cardList: []
 })
@@ -245,25 +331,62 @@ const genderText = (g: number | string) => {
 
 const filteredTransactions = computed(() => {
   if (activeTab.value === 'all') return transactionList.value
+  if (activeTab.value === 'other') {
+    return transactionList.value.filter(t =>
+      !['consume', 'refund', 'recharge', 'adjust', 'bind'].includes(t.type)
+    )
+  }
   return transactionList.value.filter(t => t.type === activeTab.value)
 })
 
-const balanceChangeCell = ({ record }: any) => {
-  const before = Number(record.beforeAmount)
-  const after = Number(record.afterAmount)
-  const diff = after - before
-  if (diff > 0) return `<span style='color:green'>+${diff}次</span>`
-  if (diff < 0) return `<span style='color:red'>${diff}次</span>`
+// 获取交易类型名称
+const getTransactionTypeName = (type: string) => {
+  const typeMap: Record<string, string> = {
+    'consume': '约课扣费',
+    'refund': '取消约课退款',
+    'recharge': '充值',
+    'adjust': '扣费',
+    'bind': '首次绑卡',
+    'debit': '扣费',
+    'credit': '充值',
+    'freeze': '冻结',
+    'activate': '激活',
+    'cancel': '取消约课',
+    'book_debit': '约课扣费'
+  }
+  return typeMap[type] || type
+}
+
+// 获取次数变化
+const getAmountChange = (record: any) => {
+  const debit = Number(record.debitAmount || 0)
+  const credit = Number(record.creditAmount || 0)
+  if (credit > 0) {
+    return `+${credit}`
+  } else if (debit > 0) {
+    return `-${debit}`
+  }
+  return '0'
+}
+
+// 获取金额颜色
+const getAmountColor = (record: any) => {
+  const debit = Number(record.debitAmount || 0)
+  const credit = Number(record.creditAmount || 0)
+  if (credit > 0) return 'green'
+  if (debit > 0) return 'red'
+  return ''
+}
+
+const amountChangeCell = ({ record }: any) => {
+  const amount = Number(record.amount || 0)
+  const direction = record.direction
+  if (direction === 'C') {
+    return `<span style='color:green'>+${amount}</span>`
+  } else if (direction === 'D') {
+    return `<span style='color:red'>-${amount}</span>`
+  }
   return `<span>0</span>`
-}
-const daysChangeCell = ({ record }: any) => {
-  const days = Number(record.creditDays) - Number(record.debitDays)
-  if (days > 0) return `<span style='color:green'>+${days}天</span>`
-  if (days < 0) return `<span style='color:red'>${days}天</span>`
-  return `<span>0天</span>`
-}
-const statusCell = ({ record }: any) => {
-  return '<span>激活</span>' // 可根据实际业务调整
 }
 
 const onImgError = (e: Event) => {
@@ -274,26 +397,22 @@ const onImgError = (e: Event) => {
 // 打开绑卡模态框
 const onBindCard = async () => {
   showBindCardModal.value = true
-  // 加载可用会员卡列表
+  // 加载可用会员卡列表和支付渠道
   try {
-    const stuId = Number(dataId.value)
-    if (!stuId) {
-      bindCardForm.cardList = []
-      return
-    }
-    const { data } = await getAvailableCards(stuId)
-    bindCardForm.cardList = data || []
+    const [cardsRes, channelsRes] = await Promise.all([
+      getAvailableCards(),
+      listActiveChannels()
+    ])
+    bindCardForm.cardList = cardsRes.data || []
+    paymentChannels.value = channelsRes.data || []
   } catch (error) {
-    console.error('获取会员卡列表失败', error)
+    console.error('获取会员卡列表或支付渠道失败', error)
   }
 }
 
 // 是否为无限期卡类型
 const isUnlimitedCard = computed(() => {
-  if (!bindCardForm.cardType) return false
-  const type = typeof bindCardForm.cardType === 'string' ? Number(bindCardForm.cardType) : bindCardForm.cardType
-  // 卡类型为2（次卡无限期）或4（储蓄卡无限期）时为无限期
-  return type === 2 || type === 4
+  return false // 新系统不再区分卡类型，统一使用账户
 })
 
 // 会员卡选择改变时自动填充卡类型
@@ -301,34 +420,15 @@ const handleCardChange = (value: string) => {
   if (value) {
     const selectedCard = bindCardForm.cardList.find(card => card.id === value)
     if (selectedCard) {
-      bindCardForm.cardType = selectedCard.type
-      bindCardForm.cardTypeDisplay = getCardTypeName(selectedCard.type)
-      // 自动带出有效天数和充值次数
-      if (selectedCard.availableDay && !isUnlimitedCard.value) {
-        bindCardForm.validDays = selectedCard.availableDay
-      } else if (isUnlimitedCard.value) {
-        bindCardForm.validDays = undefined
-      }
-      
-      // 设置默认充值次数
-      if (selectedCard.availableCount) {
-        bindCardForm.balance = selectedCard.availableCount
-      } else if (selectedCard.availableBalance) {
-        bindCardForm.balance = selectedCard.availableBalance
-      }
-      
-      // 设置默认实收金额
-      if (selectedCard.price) {
-        bindCardForm.actualAmount = Number(selectedCard.price)
-      }
+      // 自动填充卡的配置信息
+      bindCardForm.balance = selectedCard.initBalance || 0
+      bindCardForm.validDays = selectedCard.initDays || 0
+      bindCardForm.actualAmount = Number(selectedCard.price) || 0
     }
   } else {
-    bindCardForm.cardType = undefined
-    bindCardForm.cardTypeDisplay = undefined
     bindCardForm.validDays = undefined
     bindCardForm.balance = undefined
     bindCardForm.actualAmount = undefined
-    bindCardForm.remark = undefined
   }
 }
 
@@ -337,16 +437,11 @@ const handleBindCard = async () => {
     Message.warning('请选择会员卡')
     return
   }
-  if (!isUnlimitedCard.value && !bindCardForm.validDays) {
-    Message.warning('请输入有效天数')
+  if (!bindCardForm.actualAmount || bindCardForm.actualAmount <= 0) {
+    Message.warning('请输入实收金额')
     return
   }
-  if (!bindCardForm.balance) {
-    Message.warning('请输入充值次数')
-    return
-  }
-  
-  // 绑定会员卡的逻辑
+
   bindCardLoading.value = true
   try {
     const selectedCard = bindCardForm.cardList.find(card => card.id === bindCardForm.cardId)
@@ -355,37 +450,34 @@ const handleBindCard = async () => {
       bindCardLoading.value = false
       return
     }
-    
-    // 确保cardName有值
-    const cardName = selectedCard.name
-    if (!cardName) {
-      Message.error('会员卡名称不能为空')
+
+    // 1. 创建订单
+    const orderParams = {
+      studentId: dataId.value,
+      cardId: bindCardForm.cardId,
+      paymentChannelId: bindCardForm.paymentChannelId,
+      paymentType: bindCardForm.paymentChannelId ? undefined : 'OFFLINE' // 如果没选支付渠道，默认线下支付
+    }
+
+    const orderRes = await createOrder(orderParams)
+    if (!orderRes.data || !orderRes.data.id) {
+      Message.error('创建订单失败')
       bindCardLoading.value = false
       return
     }
-    console.log("cardName is: " + cardName)
-    
-    const params = {
-      stuId: dataId.value,
-      stuName: dataDetail.value.name,
-      cardId: bindCardForm.cardId,
-      cardName: cardName,
-      cardType: bindCardForm.cardType,
-      balance: bindCardForm.balance, // 充值次数
-      expireDate: isUnlimitedCard.value ? null : new Date(Date.now() + Number(bindCardForm.validDays) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      cardStatus: 1, // 默认启用
-      actualAmount: bindCardForm.actualAmount, // 实收金额
-      remark: bindCardForm.remark // 备注
-    }
-    
-    await bindStuCard(params)
-    Message.success('绑定会员卡成功')
+
+    // 2. 确认订单（激活账户并充值）
+    await confirmOrder(orderRes.data.id)
+
+    Message.success('充值成功')
     showBindCardModal.value = false
-    // 刷新会员卡列表
-    await getCardList()
+
+    // 刷新账户信息和交易记录
+    await getAccountInfo()
+    await getTransactionList()
   } catch (error) {
-    console.error('绑定会员卡失败', error)
-    Message.error('绑定会员卡失败')
+    console.error('充值失败', error)
+    Message.error('充值失败：' + (error.message || '未知错误'))
   } finally {
     bindCardLoading.value = false
   }
@@ -396,11 +488,10 @@ const cancelBindCard = () => {
   showBindCardModal.value = false
   // 重置表单
   bindCardForm.cardId = undefined
-  bindCardForm.cardType = undefined
-  bindCardForm.cardTypeDisplay = undefined
   bindCardForm.validDays = undefined
   bindCardForm.balance = undefined
   bindCardForm.actualAmount = undefined
+  bindCardForm.paymentChannelId = undefined
   bindCardForm.remark = undefined
 }
 
@@ -412,41 +503,90 @@ const onEditInfo = () => {
 
 // 查询详情
 const getDataDetail = async () => {
-  const { data } = await getStudent(dataId.value)
-  dataDetail.value = data
+  try {
+    const { data } = await getStudent(dataId.value)
+    dataDetail.value = data
+  } catch (error) {
+    console.error('获取学生详情失败', error)
+    Message.error('获取学生详情失败，请稍后重试')
+  }
 }
 
-// 查询会员卡列表
-const getCardList = async () => {
+// 查询账户信息
+const getAccountInfo = async () => {
   const stuId = Number(dataId.value)
   if (!stuId) {
-    cardList.value = []
+    accountList.value = []
     return
   }
-  const { data } = await getAvailableCards(stuId)
-  cardList.value = data || []
+  try {
+    const { data } = await getStudentAccounts(stuId)
+    accountList.value = data || []
+  } catch (error) {
+    console.error('获取账户信息失败', error)
+    accountList.value = []
+  }
 }
 
 // 查询交易记录
 const getTransactionList = async () => {
-  const { data } = await listTransaction({
-    stuId: dataId.value,
-    cardId: undefined,
-    type: undefined,
-    sort: ['id,desc'],
-    page: 1,
-    size: 99
-  } as any)
-  transactionList.value = (data as any)?.records || []
+  try {
+    const { data } = await listTransaction({
+      studentId: dataId.value,
+      cardId: undefined,
+      type: undefined,
+      sort: ['id,desc'],
+      page: 1,
+      size: 20
+    } as any)
+    transactionList.value = (data as any)?.records || []
+  } catch (error) {
+    console.error('获取交易记录失败', error)
+    transactionList.value = []
+  }
 }
 
 // 打开
 const onOpen = async (id: string) => {
   dataId.value = id
-  await getDataDetail()
-  await getCardList()
-  await getTransactionList()
   visible.value = true
+  loading.value = true
+
+  try {
+    // 并行加载三个请求
+    await Promise.all([
+      getDataDetail(),
+      getAccountInfo(),
+      getTransactionList()
+    ])
+  } catch (error) {
+    console.error('加载详情数据失败', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 充值
+const StudentAdjustBalanceModalRef = ref<InstanceType<typeof StudentAdjustBalanceModal>>()
+const onRecharge = (record: any) => {
+  StudentAdjustBalanceModalRef.value?.onOpen(dataId.value, dataDetail.value?.name, record.balance || 0, 'RECHARGE')
+}
+
+// 扣费
+const onDeduct = (record: any) => {
+  StudentAdjustBalanceModalRef.value?.onOpen(dataId.value, dataDetail.value?.name, record.balance || 0, 'DEDUCT')
+}
+
+// 查看操作记录
+const StudentBalanceRecordsDrawerRef = ref<InstanceType<typeof StudentBalanceRecordsDrawer>>()
+const onViewRecords = (record: any) => {
+  StudentBalanceRecordsDrawerRef.value?.onOpen(dataId.value, dataDetail.value?.name)
+}
+
+// 充值/扣费成功后刷新数据
+const handleBalanceChanged = async () => {
+  await getAccountInfo()
+  await getTransactionList()
 }
 
 defineExpose({ onOpen })
@@ -523,10 +663,42 @@ defineExpose({ onOpen })
 }
 .card-list-section {
   margin-bottom: 24px;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
 }
 .card-list-title {
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+.account-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.account-table :deep(.arco-table-th) {
+  background-color: #f7f8fa;
+  font-weight: 600;
+}
+.balance-text {
+  font-weight: 600;
+  color: #165dff;
+  font-size: 15px;
+}
+.expire-permanent {
+  color: #00b42a;
+  font-weight: 500;
+}
+.empty-account {
+  padding: 40px 0;
+  text-align: center;
+  background: #f7f8fa;
+  border-radius: 8px;
+}
+.empty-text {
+  font-size: 14px;
+  color: #999;
 }
 .transaction-section {
   margin-top: 24px;

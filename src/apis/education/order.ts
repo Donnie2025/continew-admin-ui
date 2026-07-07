@@ -1,6 +1,6 @@
 import http from '@/utils/http'
 
-const BASE_URL = '/education/order'
+const BASE_URL = '/api/education/order'
 
 export interface OrderResp {
   id: string
@@ -75,6 +75,11 @@ export function getOrder(id: string) {
 
 /** @desc 新增订单 */
 export function addOrder(data: any) {
+  return http.post(BASE_URL, data)
+}
+
+/** @desc 创建订单 */
+export function createOrder(data: any) {
   return http.post(BASE_URL, data)
 }
 

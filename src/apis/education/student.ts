@@ -17,6 +17,7 @@ export interface StudentResp {
   createUserString: string
   updateUserString: string
   disabled: boolean
+  paidBalance: number
   activeCards: Array<{
     cardName: string
     cardType: string
@@ -150,4 +151,47 @@ export function updateStudentName(id: string, newName: string) {
 /** @desc 搜索学生（支持姓名和手机号模糊查找） */
 export function searchStudent(keyword: string) {
   return http.get<StudentResp[]>(`${BASE_URL}/search`, { keyword })
+}
+
+export interface StudentAdjustBalanceReq {
+  studentId: string
+  amount: number
+  cashAmount?: number
+  type: 'INCREASE' | 'DECREASE'
+  remark?: string
+}
+
+/** @desc 调整学生余额 */
+export function adjustStudentBalance(data: StudentAdjustBalanceReq) {
+  return http.post(`${BASE_URL}/${data.studentId}/adjust-balance`, {
+    amount: data.amount,
+    cashAmount: data.cashAmount,
+    type: data.type,
+    remark: data.remark
+  })
+}
+
+export interface BalanceRecordResp {
+  id: string
+  stuId: string
+  stuName: string
+  cardId: string | null
+  cardTitle: string | null
+  type: string
+  debitAmount: number
+  creditAmount: number
+  debitDays: number | null
+  creditDays: number | null
+  beforeAmount: number
+  afterAmount: number
+  actualAmount: number | null
+  remark: string | null
+  operatorName: string
+  createTime: string
+  createUserString: string | null
+}
+
+/** @desc 查询学生余额操作记录 */
+export function listBalanceRecords(studentId: string) {
+  return http.get<BalanceRecordResp[]>(`${BASE_URL}/${studentId}/balance-records`)
 }
