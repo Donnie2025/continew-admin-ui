@@ -83,49 +83,141 @@
       </div>
     </div>
 
-    <!-- 消费记录Tab -->
-    <div class="transaction-section">
-      <a-tabs v-model:active-key="activeTab" type="line">
-        <a-tab-pane key="all" title="全部" />
-        <a-tab-pane key="consume" title="约课扣费" />
-        <a-tab-pane key="refund" title="取消约课" />
-        <a-tab-pane key="recharge" title="充值" />
-        <a-tab-pane key="adjust" title="扣费" />
-        <a-tab-pane key="bind" title="首次绑卡" />
-        <a-tab-pane key="other" title="其他" />
+    <!-- 主标签页 -->
+    <div class="main-tabs-section">
+      <a-tabs v-model:active-key="mainTab" type="line" class="main-tabs">
+        <a-tab-pane key="transactions" title="消费记录">
+          <!-- 消费记录二级标签 -->
+          <a-tabs v-model:active-key="transactionTab" type="rounded" class="sub-tabs">
+            <a-tab-pane key="all" title="全部" />
+            <a-tab-pane key="consume" title="约课扣费" />
+            <a-tab-pane key="adjust" title="手动扣费" />
+            <a-tab-pane key="cancel" title="取消约课" />
+            <a-tab-pane key="recharge_bind" title="充值/首次绑卡" />
+            <a-tab-pane key="other" title="其他" />
+          </a-tabs>
+          <a-table
+            :data="filteredTransactions"
+            :columns="transactionColumns"
+            :pagination="pagination"
+            :bordered="{ cell: true }"
+            size="medium"
+            class="transaction-table"
+            @page-change="onTransactionPageChange"
+          >
+            <template #type="{ record }">
+              <span v-if="record.type">{{ getTransactionTypeName(record.type) }}</span>
+              <span v-else>-</span>
+            </template>
+            <template #cardTitle="{ record }">
+              <span v-if="record.cardTitle">{{ record.cardTitle }}</span>
+              <span v-else>-</span>
+            </template>
+            <template #amountChange="{ record }">
+              <span :style="{ color: getAmountColor(record) }">
+                {{ getAmountChange(record) }}
+              </span>
+            </template>
+            <template #actualAmount="{ record }">
+              <span v-if="record.actualAmount">¥{{ record.actualAmount }}</span>
+              <span v-else>-</span>
+            </template>
+            <template #operatorName="{ record }">
+              <span v-if="record.operatorName">{{ record.operatorName }}</span>
+              <span v-else>-</span>
+            </template>
+            <template #remark="{ record }">
+              <span v-if="record.remark">{{ record.remark }}</span>
+              <span v-else>-</span>
+            </template>
+          </a-table>
+        </a-tab-pane>
+
+        <a-tab-pane key="bookings" title="预约记录">
+          <a-table
+            :data="bookingList"
+            :columns="bookingColumns"
+            :pagination="bookingPagination"
+            :bordered="{ cell: true }"
+            size="medium"
+            class="booking-table"
+            @page-change="onBookingPageChange"
+          >
+            <template #slotDateTime="{ record }">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 4px 0;">
+                <span
+                  :style="{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    backgroundColor: isClassCompleted(record.slotDate, record.slotTime) ? '#f53f3f' : '#00b42a'
+                  }"
+                ></span>
+                <span style="display: flex; gap: 12px;">
+                  <span>{{ getWeekDay(record.slotDate) }}</span>
+                  <span>{{ formatDate(record.slotDate) }}</span>
+                  <span>{{ record.slotTime }}</span>
+                </span>
+              </div>
+            </template>
+            <template #materialName="{ record }">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span>{{ getMaterialDisplayName(record.materialId, record.materialName, record.materialLevel) }}</span>
+                <a
+                  v-if="record.lessonUrl"
+                  :href="record.lessonUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: #165dff; text-decoration: none; cursor: pointer; font-size: 13px;"
+                  @click.stop
+                >
+                  {{ record.lessonName || '-' }}
+                </a>
+                <span v-else style="color: #86909c; font-size: 13px;">{{ record.lessonName || '-' }}</span>
+              </div>
+            </template>
+            <template #action="{ record }">
+              <a-space>
+                <a-button type="text" size="small" @click="onEditBooking(record)">修改</a-button>
+                <a-button type="text" status="danger" size="small" @click="onCancelBooking(record)">取消预约</a-button>
+              </a-space>
+            </template>
+          </a-table>
+        </a-tab-pane>
+        <a-tab-pane key="fixed-bookings" title="固定课记录">
+          <a-table
+            :data="fixedBookingList"
+            :columns="fixedBookingColumns"
+            :pagination="fixedBookingPagination"
+            :bordered="{ cell: true }"
+            size="medium"
+            class="fixed-booking-table"
+            @page-change="onFixedBookingPageChange"
+          >
+            <template #weekDay="{ record }">
+              <span>{{ getWeekDayText(record.weekDay) }}</span>
+            </template>
+            <template #action="{ record }">
+              <a-button
+                v-if="record.status === 1"
+                type="text"
+                status="danger"
+                size="small"
+                @click="onCancelFixedBooking(record)"
+              >
+                取消
+              </a-button>
+              <span v-else style="color: #999;">已取消</span>
+            </template>
+          </a-table>
+        </a-tab-pane>
+
+        <a-tab-pane key="other" title="其他">
+          <a-empty description="暂无其他内容" />
+        </a-tab-pane>
       </a-tabs>
-      <a-table
-        :data="filteredTransactions"
-        :pagination="pagination"
-        :bordered="{ cell: true }"
-        size="medium"
-        class="transaction-table"
-      >
-        <a-table-column title="操作时间" data-index="createTime" :width="180" />
-        <a-table-column title="操作类型" data-index="type" :width="120">
-          <template #cell="{ record }">
-            {{ getTransactionTypeName(record.type) }}
-          </template>
-        </a-table-column>
-        <a-table-column title="次数" :width="100" align="center">
-          <template #cell="{ record }">
-            <span :style="{ color: getAmountColor(record) }">
-              {{ getAmountChange(record) }}
-            </span>
-          </template>
-        </a-table-column>
-        <a-table-column title="卡到期日" data-index="expireDate" :width="120" />
-        <a-table-column title="金额" data-index="actualAmount" :width="100" align="center" />
-        <a-table-column title="操作人" data-index="operatorName" :width="120" />
-        <a-table-column title="备注" data-index="remark" :min-width="150" />
-        <a-table-column title="状态" :width="100" align="center">
-          <template #cell="{ record }">
-            <a-tag :color="record.disabled ? 'gray' : 'green'">
-              {{ record.disabled ? '停用' : '激活' }}
-            </a-tag>
-          </template>
-        </a-table-column>
-      </a-table>
     </div>
     </a-spin>
   </a-drawer>
@@ -210,12 +302,65 @@
           :auto-size="{ minRows: 3, maxRows: 5 }"
         />
       </a-form-item>
-      
+
     </a-form>
-    
+
     <template #footer>
       <a-button @click="cancelBindCard">取消</a-button>
       <a-button type="primary" @click="handleBindCard" :loading="bindCardLoading">确定</a-button>
+    </template>
+  </a-modal>
+
+  <!-- 修改预约模态框 -->
+  <a-modal
+    v-model:visible="showEditBookingModal"
+    title="修改预约"
+    :mask-closable="false"
+    :width="500"
+    @cancel="cancelEditBooking"
+  >
+    <a-form :model="editBookingForm" layout="vertical">
+      <a-form-item label="教材">
+        <a-select
+          v-model="editBookingForm.materialId"
+          placeholder="请选择教材（支持搜索）"
+          allow-clear
+          allow-search
+          @change="handleMaterialChange"
+        >
+          <a-option v-for="material in materialList" :key="material.id" :value="material.id">
+            {{ material.displayName }}
+          </a-option>
+        </a-select>
+      </a-form-item>
+
+      <a-form-item label="课节">
+        <a-select
+          v-model="editBookingForm.lessonId"
+          placeholder="请先选择教材（支持搜索）"
+          allow-clear
+          allow-search
+          :disabled="!editBookingForm.materialId"
+          :loading="lessonLoading"
+        >
+          <a-option v-for="lesson in lessonList" :key="lesson.id" :value="lesson.id">
+            {{ lesson.name }}
+          </a-option>
+        </a-select>
+      </a-form-item>
+
+      <a-form-item label="备注">
+        <a-textarea
+          v-model="editBookingForm.remark"
+          placeholder="请输入备注"
+          :auto-size="{ minRows: 3, maxRows: 5 }"
+        />
+      </a-form-item>
+    </a-form>
+
+    <template #footer>
+      <a-button @click="cancelEditBooking">取消</a-button>
+      <a-button type="primary" @click="handleEditBooking">确定</a-button>
     </template>
   </a-modal>
 </template>
@@ -230,6 +375,9 @@ import { listTransaction } from '@/apis/education/transaction'
 import { createOrder, confirmOrder } from '@/apis/education/order'
 import { getStudentAccounts } from '@/apis/education/account'
 import { listActiveChannels } from '@/apis/education/paymentChannel'
+import { listBooking, cancelBookingByTeacher, updateBookingInfo } from '@/apis/education/booking'
+import { listBookingRecordsByStudentId, deleteFixedBooking } from '@/apis/education/fixed'
+import { listAllMaterials, listLessonsByMaterialId } from '@/apis/education/material'
 import { useDict } from '@/hooks/app'
 import StudentAdjustBalanceModal from './StudentAdjustBalanceModal.vue'
 import StudentBalanceRecordsDrawer from './StudentBalanceRecordsDrawer.vue'
@@ -240,9 +388,19 @@ const dataId = ref('')
 const dataDetail = ref<any>({})
 const accountList = ref<any[]>([])
 const transactionList = ref<any[]>([])
-const activeTab = ref('all')
-const pagination = ref({ pageSize: 10, current: 1 })
+const mainTab = ref('bookings')
+const transactionTab = ref('all')
+const pagination = ref({ pageSize: 10, current: 1, total: 0 })
 const loading = ref(false)
+
+// 预约记录相关
+const bookingList = ref<any[]>([])
+const bookingPagination = ref({ pageSize: 10, current: 1, total: 0 })
+
+// 固定课相关
+const fixedBookingList = ref<any[]>([])
+const fixedBookingListAll = ref<any[]>([]) // 存储所有固定课数据
+const fixedBookingPagination = ref({ pageSize: 10, current: 1, total: 0 })
 
 const accountColumns = [
   {
@@ -273,6 +431,117 @@ const accountColumns = [
   {
     title: '操作',
     width: 280,
+    align: 'center',
+    slotName: 'action',
+  },
+]
+
+const transactionColumns = [
+  {
+    title: '操作时间',
+    dataIndex: 'createTime',
+    width: 180,
+  },
+  {
+    title: '操作类型',
+    dataIndex: 'type',
+    width: 120,
+    slotName: 'type',
+  },
+  {
+    title: '会员卡',
+    dataIndex: 'cardTitle',
+    width: 150,
+    slotName: 'cardTitle',
+  },
+  {
+    title: '余额变化',
+    width: 120,
+    align: 'center',
+    slotName: 'amountChange',
+  },
+  {
+    title: '实收金额',
+    dataIndex: 'actualAmount',
+    width: 100,
+    align: 'center',
+    slotName: 'actualAmount',
+  },
+  {
+    title: '操作人',
+    dataIndex: 'operatorName',
+    width: 120,
+    slotName: 'operatorName',
+  },
+  {
+    title: '备注',
+    dataIndex: 'remark',
+    minWidth: 150,
+    slotName: 'remark',
+  },
+]
+
+const bookingColumns = [
+  {
+    title: '预约老师',
+    dataIndex: 'teacherName',
+    width: 100,
+  },
+  {
+    title: '上课时间',
+    dataIndex: 'slotDateTime',
+    width: 200,
+    slotName: 'slotDateTime',
+  },
+  {
+    title: '教材/课节',
+    dataIndex: 'materialName',
+    width: 250,
+    slotName: 'materialName',
+  },
+  {
+    title: '备注',
+    dataIndex: 'remark',
+    width: 100,
+  },
+  {
+    title: '操作',
+    width: 80,
+    align: 'center',
+    slotName: 'action',
+  },
+]
+
+const fixedBookingColumns = [
+  {
+    title: '教师',
+    dataIndex: 'teacherName',
+    width: 120,
+  },
+  {
+    title: '星期',
+    dataIndex: 'weekDay',
+    width: 100,
+    slotName: 'weekDay',
+  },
+  {
+    title: '时间',
+    dataIndex: 'startTime',
+    width: 120,
+  },
+  {
+    title: '操作人',
+    dataIndex: 'createUserString',
+    width: 120,
+  },
+  {
+    title: '操作时间',
+    dataIndex: 'createTime',
+    width: 180,
+  },
+  {
+    title: '操作',
+    width: 100,
     align: 'center',
     slotName: 'action',
   },
@@ -330,13 +599,18 @@ const genderText = (g: number | string) => {
 }
 
 const filteredTransactions = computed(() => {
-  if (activeTab.value === 'all') return transactionList.value
-  if (activeTab.value === 'other') {
+  if (transactionTab.value === 'all') return transactionList.value
+  if (transactionTab.value === 'recharge_bind') {
+    // 充值/首次绑卡：包含 recharge 和 bind 类型
+    return transactionList.value.filter(t => ['recharge', 'bind'].includes(t.type))
+  }
+  if (transactionTab.value === 'other') {
+    // 其他：排除已知的主要类型
     return transactionList.value.filter(t =>
-      !['consume', 'refund', 'recharge', 'adjust', 'bind'].includes(t.type)
+      !['consume', 'cancel', 'recharge', 'adjust', 'bind'].includes(t.type)
     )
   }
-  return transactionList.value.filter(t => t.type === activeTab.value)
+  return transactionList.value.filter(t => t.type === transactionTab.value)
 })
 
 // 获取交易类型名称
@@ -359,22 +633,24 @@ const getTransactionTypeName = (type: string) => {
 
 // 获取次数变化
 const getAmountChange = (record: any) => {
-  const debit = Number(record.debitAmount || 0)
-  const credit = Number(record.creditAmount || 0)
-  if (credit > 0) {
-    return `+${credit}`
-  } else if (debit > 0) {
-    return `-${debit}`
+  const direction = record.direction
+  const amount = Number(record.amount || 0)
+
+  if (direction === 'C') {
+    // Credit - 入账/增加
+    return amount > 0 ? `+${amount}` : '0'
+  } else if (direction === 'D') {
+    // Debit - 出账/减少
+    return amount > 0 ? `-${amount}` : '0'
   }
   return '0'
 }
 
 // 获取金额颜色
 const getAmountColor = (record: any) => {
-  const debit = Number(record.debitAmount || 0)
-  const credit = Number(record.creditAmount || 0)
-  if (credit > 0) return 'green'
-  if (debit > 0) return 'red'
+  const direction = record.direction
+  if (direction === 'C') return 'green' // Credit - 增加
+  if (direction === 'D') return 'red'   // Debit - 减少
   return ''
 }
 
@@ -392,6 +668,148 @@ const amountChangeCell = ({ record }: any) => {
 const onImgError = (e: Event) => {
   const target = e.target as HTMLImageElement | null
   if (target) target.style.display = 'none'
+}
+
+// 格式化时间段日期时间
+const formatSlotDateTime = (slotDate: string, slotTime: string) => {
+  if (!slotDate || !slotTime) return '-'
+  // slotDate format: 20260708, slotTime format: 20:30
+  const year = slotDate.substring(0, 4)
+  const month = slotDate.substring(4, 6)
+  const day = slotDate.substring(6, 8)
+
+  // 计算星期几
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const weekDay = weekDays[date.getDay()]
+
+  return `${weekDay}  ${year}-${month}-${day}  ${slotTime}`
+}
+
+// 获取星期几
+const getWeekDay = (slotDate: string) => {
+  if (!slotDate) return ''
+  const year = parseInt(slotDate.substring(0, 4))
+  const month = parseInt(slotDate.substring(4, 6)) - 1
+  const day = parseInt(slotDate.substring(6, 8))
+  const date = new Date(year, month, day)
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return weekDays[date.getDay()]
+}
+
+// 格式化日期
+const formatDate = (slotDate: string) => {
+  if (!slotDate) return ''
+  const year = slotDate.substring(0, 4)
+  const month = slotDate.substring(4, 6)
+  const day = slotDate.substring(6, 8)
+  return `${year}-${month}-${day}`
+}
+
+// 判断课程是否已完成
+const isClassCompleted = (slotDate: string, slotTime: string) => {
+  if (!slotDate || !slotTime) return false
+  try {
+    // slotDate format: 20260708, slotTime format: 20:30
+    const year = parseInt(slotDate.substring(0, 4))
+    const month = parseInt(slotDate.substring(4, 6)) - 1
+    const day = parseInt(slotDate.substring(6, 8))
+    const [hours, minutes] = slotTime.split(':').map(Number)
+
+    const classDateTime = new Date(year, month, day, hours, minutes)
+    const now = new Date()
+
+    return classDateTime < now
+  } catch (error) {
+    console.error('判断课程完成状态失败', error)
+    return false
+  }
+}
+
+// 获取预约状态颜色
+const getBookingStatusColor = (status: number) => {
+  const colorMap: Record<number, string> = {
+    0: 'red',    // 已取消
+    1: 'green',  // 已预约
+  }
+  return colorMap[status] || 'gray'
+}
+
+// 获取预约状态文本
+const getBookingStatusText = (status: number) => {
+  const textMap: Record<number, string> = {
+    0: '已取消',
+    1: '已预约',
+  }
+  return textMap[status] || '未知'
+}
+
+// 获取星期文本
+const getWeekDayText = (weekDay: number) => {
+  const weekMap: Record<number, string> = {
+    1: '周一',
+    2: '周二',
+    3: '周三',
+    4: '周四',
+    5: '周五',
+    6: '周六',
+    7: '周日',
+  }
+  return weekMap[weekDay] || '-'
+}
+
+// 获取教材显示名称（带级别）
+const getMaterialDisplayName = (materialId: string, fallbackName: string, materialLevel?: string) => {
+  // 如果后端直接返回了 materialLevel，直接拼接显示
+  if (materialLevel) {
+    return `${fallbackName || ''}-${materialLevel}`
+  }
+
+  // 否则从映射中查找
+  if (!materialId) return fallbackName || '-'
+  const displayName = materialDisplayMap.value.get(materialId)
+  return displayName || fallbackName || '-'
+}
+
+// 加载教材列表并构建显示映射
+const loadMaterialDisplayMap = async () => {
+  try {
+    const [bookRes, levelRes] = await Promise.all([
+      listAllMaterials('BOOK'),
+      listAllMaterials('LEVEL')
+    ])
+
+    const books = bookRes?.data ? (Array.isArray(bookRes.data) ? bookRes.data : ((bookRes.data as any).list || [])) : []
+    const allLevels = levelRes?.data ? (Array.isArray(levelRes.data) ? levelRes.data : ((levelRes.data as any).list || [])) : []
+
+    const displayMap = new Map<string, string>()
+
+    // 构建 BOOK ID 到 BOOK 对象的映射
+    const bookMap = new Map<string, any>()
+    books.forEach((book: any) => {
+      bookMap.set(String(book.id), book)
+      // BOOK 本身也添加到映射中
+      displayMap.set(String(book.id), book.name)
+    })
+
+    // 处理所有 LEVEL，构建完整的显示名称
+    allLevels.forEach((level: any) => {
+      const book = bookMap.get(String(level.pid))
+      if (book) {
+        // 格式：【代码】书名-级别名
+        const displayName = `【${book.code || ''}】${book.name}-${level.name}`
+        displayMap.set(String(level.id), displayName)
+      } else {
+        // 如果找不到父级 BOOK，只显示 LEVEL 名称
+        displayMap.set(String(level.id), level.name)
+      }
+    })
+
+    materialDisplayMap.value = displayMap
+    console.log('教材显示映射构建完成，共', displayMap.size, '条记录')
+  } catch (error) {
+    console.error('加载教材显示映射失败', error)
+  }
 }
 
 // 打开绑卡模态框
@@ -474,6 +892,7 @@ const handleBindCard = async () => {
 
     // 刷新账户信息和交易记录
     await getAccountInfo()
+    pagination.value.current = 1 // 重置到第一页
     await getTransactionList()
   } catch (error) {
     console.error('充值失败', error)
@@ -536,13 +955,272 @@ const getTransactionList = async () => {
       cardId: undefined,
       type: undefined,
       sort: ['id,desc'],
-      page: 1,
-      size: 20
+      page: pagination.value.current,
+      size: pagination.value.pageSize
     } as any)
-    transactionList.value = (data as any)?.records || []
+    transactionList.value = (data as any)?.list || []
+    pagination.value.total = (data as any)?.total || 0
   } catch (error) {
     console.error('获取交易记录失败', error)
     transactionList.value = []
+  }
+}
+
+// 交易记录分页变化
+const onTransactionPageChange = (page: number) => {
+  pagination.value.current = page
+  getTransactionList()
+}
+
+// 查询预约记录
+const getBookingList = async () => {
+  try {
+    const { data } = await listBooking({
+      studentId: dataId.value,
+      sort: ['slotDate,desc', 'slotTime,desc'],
+      page: bookingPagination.value.current,
+      size: bookingPagination.value.pageSize
+    } as any)
+    const list = (data as any)?.list || []
+    // 前端再次确保按上课时间倒序排列
+    bookingList.value = list.sort((a: any, b: any) => {
+      // 先比较日期
+      const dateCompare = String(b.slotDate || '').localeCompare(String(a.slotDate || ''))
+      if (dateCompare !== 0) return dateCompare
+      // 日期相同时比较时间
+      return String(b.slotTime || '').localeCompare(String(a.slotTime || ''))
+    })
+    bookingPagination.value.total = (data as any)?.total || 0
+  } catch (error) {
+    console.error('获取预约记录失败', error)
+    bookingList.value = []
+  }
+}
+
+// 预约记录分页变化
+const onBookingPageChange = (page: number) => {
+  bookingPagination.value.current = page
+  getBookingList()
+}
+
+// 查询固定课记录
+const getFixedBookingList = async () => {
+  try {
+    const { data } = await listBookingRecordsByStudentId(dataId.value)
+    fixedBookingListAll.value = data || []
+    fixedBookingPagination.value.total = fixedBookingListAll.value.length
+    updateFixedBookingDisplayList()
+  } catch (error) {
+    console.error('获取固定课记录失败', error)
+    fixedBookingListAll.value = []
+    fixedBookingList.value = []
+  }
+}
+
+// 更新固定课显示列表（客户端分页）
+const updateFixedBookingDisplayList = () => {
+  const { current, pageSize } = fixedBookingPagination.value
+  const start = (current - 1) * pageSize
+  const end = start + pageSize
+  fixedBookingList.value = fixedBookingListAll.value.slice(start, end)
+}
+
+// 固定课分页变化
+const onFixedBookingPageChange = (page: number) => {
+  fixedBookingPagination.value.current = page
+  updateFixedBookingDisplayList()
+}
+
+// 取消固定课预约
+const onCancelFixedBooking = async (record: any) => {
+  try {
+    await deleteFixedBooking(record.id)
+    Message.success('取消预约成功')
+    fixedBookingPagination.value.current = 1 // 重置到第一页
+    await getFixedBookingList()
+  } catch (error) {
+    console.error('取消预约失败', error)
+    Message.error('取消预约失败')
+  }
+}
+
+// 修改预约记录
+const showEditBookingModal = ref(false)
+const editBookingForm = reactive<{
+  bookingId: string
+  materialId: string | undefined
+  lessonId: string | undefined
+  lessonName: string | undefined
+  remark: string | undefined
+}>({
+  bookingId: '',
+  materialId: undefined,
+  lessonId: undefined,
+  lessonName: undefined,
+  remark: undefined
+})
+
+// 教材和课节相关
+const materialList = ref<any[]>([])
+const lessonList = ref<any[]>([])
+const lessonLoading = ref(false)
+const materialDisplayMap = ref<Map<string, string>>(new Map())
+
+const onEditBooking = async (record: any) => {
+  // 先加载教材列表（同时加载 BOOK 和 LEVEL）
+  try {
+    // 一次性查询所有 BOOK 和 LEVEL 数据
+    const [bookRes, levelRes] = await Promise.all([
+      listAllMaterials('BOOK'),
+      listAllMaterials('LEVEL')
+    ])
+
+    const books = bookRes?.data ? (Array.isArray(bookRes.data) ? bookRes.data : ((bookRes.data as any).list || [])) : []
+    const allLevels = levelRes?.data ? (Array.isArray(levelRes.data) ? levelRes.data : ((levelRes.data as any).list || [])) : []
+
+    // 组装数据
+    const materialWithLevels: any[] = []
+
+    books.forEach((book: any) => {
+      // 找到该 BOOK 下的所有 LEVEL（pid 等于 book.id）
+      const levels = allLevels.filter((level: any) => String(level.pid) === String(book.id))
+
+      if (levels.length > 0) {
+        // 如果有 LEVEL，为每个 LEVEL 创建一个选项，格式：教材名-级别名
+        levels.forEach((level: any) => {
+          materialWithLevels.push({
+            id: level.id,  // 使用 LEVEL 的 ID
+            name: level.name,
+            displayName: `${book.name}-${level.name}`,  // 组合显示名称
+            bookId: book.id,
+            bookName: book.name,
+            levelName: level.name,
+            type: 'LEVEL'
+          })
+        })
+      } else {
+        // 如果没有 LEVEL，直接使用 BOOK
+        materialWithLevels.push({
+          id: book.id,
+          name: book.name,
+          displayName: book.name,
+          bookId: book.id,
+          bookName: book.name,
+          type: 'BOOK'
+        })
+      }
+    })
+
+    // 按照排序规则：先按sort正向排序，如果sort值一样，再按照名称正向排序
+    materialList.value = materialWithLevels.sort((a: any, b: any) => {
+      const sortA = a.sort ?? Infinity
+      const sortB = b.sort ?? Infinity
+      if (sortA !== sortB) {
+        return sortA - sortB
+      }
+      // sort相同时，按名称正向排序
+      return (a.name || '').localeCompare(b.name || '')
+    })
+  } catch (error) {
+    console.error('获取教材列表失败', error)
+  }
+
+  // 如果有教材ID，加载对应的课节列表
+  if (record.materialId) {
+    await loadLessonsByMaterial(record.materialId)
+  }
+
+  // 最后设置表单数据并显示模态框
+  editBookingForm.bookingId = record.id
+  editBookingForm.materialId = record.materialId
+  editBookingForm.lessonId = record.lessonId
+  editBookingForm.lessonName = record.lessonName
+  editBookingForm.remark = record.remark
+  showEditBookingModal.value = true
+}
+
+// 教材选择改变时，加载对应的课节列表
+const handleMaterialChange = async (materialId: string) => {
+  editBookingForm.lessonId = undefined
+  lessonList.value = []
+
+  if (materialId) {
+    await loadLessonsByMaterial(materialId)
+  }
+}
+
+// 加载课节列表
+const loadLessonsByMaterial = async (materialId: string) => {
+  lessonLoading.value = true
+  try {
+    const { data } = await listLessonsByMaterialId(materialId)
+    // 判断数据结构，可能是分页数据或直接数组
+    let lessons = []
+    if (Array.isArray(data)) {
+      lessons = data
+    } else if ((data as any)?.list && Array.isArray((data as any).list)) {
+      lessons = (data as any).list
+    }
+
+    // 按照排序规则：先按sort正向排序，如果sort值一样，再按照名称正向排序
+    lessonList.value = lessons.sort((a: any, b: any) => {
+      const sortA = a.sort ?? Infinity
+      const sortB = b.sort ?? Infinity
+      if (sortA !== sortB) {
+        return sortA - sortB
+      }
+      // sort相同时，按名称正向排序
+      return (a.name || '').localeCompare(b.name || '')
+    })
+  } catch (error) {
+    console.error('获取课节列表失败', error)
+    lessonList.value = []
+  } finally {
+    lessonLoading.value = false
+  }
+}
+
+const handleEditBooking = async () => {
+  try {
+    // 根据lessonId找到对应的lessonName
+    let lessonName = editBookingForm.lessonName
+    if (editBookingForm.lessonId) {
+      const selectedLesson = lessonList.value.find(l => l.id === editBookingForm.lessonId)
+      if (selectedLesson) {
+        lessonName = selectedLesson.name
+      }
+    }
+
+    await updateBookingInfo(editBookingForm.bookingId, {
+      materialId: editBookingForm.materialId,
+      lessonId: editBookingForm.lessonId,
+      lessonName: lessonName,
+      remark: editBookingForm.remark
+    })
+    Message.success('修改预约成功')
+    showEditBookingModal.value = false
+    bookingPagination.value.current = 1 // 重置到第一页
+    await getBookingList()
+  } catch (error) {
+    console.error('修改预约失败', error)
+    Message.error('修改预约失败')
+  }
+}
+
+const cancelEditBooking = () => {
+  showEditBookingModal.value = false
+}
+
+// 取消预约
+const onCancelBooking = async (record: any) => {
+  try {
+    await cancelBookingByTeacher(record.id)
+    Message.success('取消预约成功')
+    bookingPagination.value.current = 1 // 重置到第一页
+    await getBookingList()
+  } catch (error) {
+    console.error('取消预约失败', error)
+    Message.error('取消预约失败')
   }
 }
 
@@ -552,12 +1230,20 @@ const onOpen = async (id: string) => {
   visible.value = true
   loading.value = true
 
+  // 重置分页状态
+  pagination.value.current = 1
+  bookingPagination.value.current = 1
+  fixedBookingPagination.value.current = 1
+
   try {
-    // 并行加载三个请求
+    // 并行加载所有请求
     await Promise.all([
       getDataDetail(),
       getAccountInfo(),
-      getTransactionList()
+      getTransactionList(),
+      getBookingList(),
+      getFixedBookingList(),
+      loadMaterialDisplayMap()
     ])
   } catch (error) {
     console.error('加载详情数据失败', error)
@@ -586,6 +1272,7 @@ const onViewRecords = (record: any) => {
 // 充值/扣费成功后刷新数据
 const handleBalanceChanged = async () => {
   await getAccountInfo()
+  pagination.value.current = 1 // 重置到第一页
   await getTransactionList()
 }
 
@@ -702,6 +1389,53 @@ defineExpose({ onOpen })
 }
 .transaction-section {
   margin-top: 24px;
+}
+.main-tabs-section {
+  margin-top: 24px;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+.main-tabs :deep(.arco-tabs-nav) {
+  margin-bottom: 0;
+}
+.main-tabs :deep(.arco-tabs-content) {
+  padding-top: 12px;
+}
+.sub-tabs {
+  margin-top: 0;
+  padding-top: 0;
+}
+.sub-tabs :deep(.arco-tabs-nav) {
+  margin-bottom: 0;
+  background-color: #f7f8fa;
+  padding: 4px;
+  border-radius: 6px;
+}
+.sub-tabs :deep(.arco-tabs-tab) {
+  padding: 6px 16px;
+  margin: 0 2px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.sub-tabs :deep(.arco-tabs-tab-active) {
+  background-color: #fff;
+  font-weight: 500;
+}
+.sub-tabs :deep(.arco-tabs-content) {
+  padding-top: 0;
+}
+.transaction-table,
+.booking-table,
+.fixed-booking-table {
+  margin-top: 12px;
+}
+.transaction-table :deep(.arco-table-th),
+.booking-table :deep(.arco-table-th),
+.fixed-booking-table :deep(.arco-table-th) {
+  background-color: #f7f8fa;
+  font-weight: 600;
 }
 .drawer-title-bar {
   display: flex;

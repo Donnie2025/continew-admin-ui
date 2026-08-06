@@ -45,17 +45,24 @@ export function renameCloudFolder(folderId: string, folderName: string) {
 }
 
 /** @desc 创建云盘文件夹 */
-export function createCloudFolder(parentFolderId: string, folderName: string) {
-  return http.post<string>(`${BASE_URL}/folder?parentFolderId=${encodeURIComponent(parentFolderId)}&folderName=${encodeURIComponent(folderName)}`)
+export function createCloudFolder(parentFolderId: string, folderName: string, enableClassInSync?: boolean) {
+  let url = `${BASE_URL}/folder?parentFolderId=${encodeURIComponent(parentFolderId)}&folderName=${encodeURIComponent(folderName)}`
+  if (enableClassInSync !== undefined) {
+    url += `&enableClassInSync=${enableClassInSync}`
+  }
+  return http.post<string>(url)
 }
 
 /** @desc 上传文件到云盘指定文件夹 */
-export function uploadCloudFile(folderId: string, file: File, feishuFolderToken?: string) {
+export function uploadCloudFile(folderId: string, file: File, feishuFolderToken?: string, enableClassInSync?: boolean) {
   const formData = new FormData()
   formData.append('file', file)
   let url = `${BASE_URL}/file/upload?folderId=${encodeURIComponent(folderId)}`
   if (feishuFolderToken) {
     url += `&feishuFolderToken=${encodeURIComponent(feishuFolderToken)}`
+  }
+  if (enableClassInSync !== undefined) {
+    url += `&enableClassInSync=${enableClassInSync}`
   }
   return http.post<{ classinFileId: string; feishuFileToken?: string; lessonUrl?: string }>(url, formData, { timeout: 10 * 60 * 1000 })
 }

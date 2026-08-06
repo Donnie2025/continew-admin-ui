@@ -13,6 +13,8 @@ export interface BookingResp {
   operatorName: string
   operateTime: string
   materialName: string
+  materialLevel: string
+  lessonUrl: string
   remark: string
   createTime: string
   updateTime: string
@@ -36,7 +38,9 @@ export interface BookingDetailResp {
   operateTime: string
   materialId: string
   materialName: string
+  materialLevel: string
   lessonName: string
+  lessonUrl: string
   materialUrl: string
   remark: string
   status: string
@@ -49,8 +53,9 @@ export interface BookingDetailResp {
 }
 export interface BookingQuery {
   studentName: string | undefined
-  cardName: string | undefined
+  teacherName: string | undefined
   createUser: string | undefined
+  timeStatus: string | undefined
   sort: Array<string>
 }
 export interface BookingPageQuery extends BookingQuery, PageQuery {}
@@ -100,6 +105,11 @@ export function cancelBookingBySlotAndStudent(slotId: string, studentId: string)
   return http.post(`${BASE_URL}/cancel-by-slot`, { slotId, studentId })
 }
 
+/** @desc 更新预约信息（仅更新部分字段） */
+export function updateBookingInfo(bookingId: string, data: any) {
+  return http.put(`${BASE_URL}/${bookingId}/info`, data)
+}
+
 /** @desc 导入预约（Excel） */
 export function importBookings(file: File) {
   const formData = new FormData()
@@ -108,4 +118,9 @@ export function importBookings(file: File) {
     '/education/slot/import-booking',
     formData,
   )
+}
+
+/** @desc 获取会员最后一节课的预约记录 */
+export function getLastBookingByStudent(studentId: string | number) {
+  return http.get<BookingDetailResp>(`${BASE_URL}/last-by-student/${studentId}`)
 }

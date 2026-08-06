@@ -114,8 +114,8 @@ export function exportMaterial(query: MaterialQuery) {
 }
 
 /** @desc 获取所有教材列表（不分页） */
-export function listAllMaterials() {
-  return http.get<MaterialResp[]>(BASE_URL, { page: 1, size: 1000, status: 1 })
+export function listAllMaterials(type?: string) {
+  return http.get<MaterialResp[]>(BASE_URL, { page: 1, size: 1000, status: 1, type })
 }
 
 /** @desc 获取所有教材节点用于构建树（管理端，不过滤状态） */
@@ -136,4 +136,16 @@ export function syncCloudData(ids: string[]) {
 /** @desc 同步飞书文件夹token */
 export function syncFeishu(id: string, recursive: boolean = false) {
   return http.post<{ total: number; success: number; failed: number; details: string[] }>(`${BASE_URL}/${id}/sync-feishu`, { recursive })
+}
+
+/** @desc 根据教材ID获取课节列表（type=LESSON） */
+export function listLessonsByMaterialId(materialId: string) {
+  return http.get<MaterialResp[]>(BASE_URL, {
+    pid: materialId,
+    type: 'LESSON',
+    page: 1,
+    size: 1000,
+    status: 1,
+    sort: ['createTime,asc']
+  })
 }

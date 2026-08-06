@@ -13,8 +13,8 @@
       @refresh="search"
     >
       <template #toolbar-left>
-	    <a-input-search v-model="queryForm.name" placeholder="请输入学生姓名" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.phone" placeholder="请输入手机号码" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.name" placeholder="请输入学生姓名" allow-clear @search="search" @press-enter="search" />
+	    <a-input-search v-model="queryForm.phone" placeholder="请输入手机号码" allow-clear @search="search" @press-enter="search" />
         <a-select
           v-model="queryForm.agentCode"
           placeholder="请选择代理商"
@@ -101,30 +101,16 @@
       <template #action="{ record }">
         <a-space>
           <a-link v-permission="['education:student:get']" @click="onDetail(record)">查看</a-link>
-          <a-dropdown trigger="hover">
-            <a-link>
-              更多
-              <icon-down />
-            </a-link>
-            <template #content>
-              <a-doption v-permission="['education:student:update']" @click="onUpdate(record)">
-                <icon-edit />
-                修改
-              </a-doption>
-              <a-doption v-permission="['education:student:update']" @click="onSetPassword(record)">
-                <icon-lock />
-                设置密码
-              </a-doption>
-              <a-doption
-                v-permission="['education:student:delete']"
-                :disabled="record.disabled"
-                @click="onDelete(record)"
-              >
-                <icon-delete />
-                <span :style="{ color: record.disabled ? '' : 'rgb(var(--danger-6))' }">删除</span>
-              </a-doption>
-            </template>
-          </a-dropdown>
+          <a-link v-permission="['education:student:update']" @click="onUpdate(record)">修改</a-link>
+          <a-link v-permission="['education:student:update']" @click="onSetPassword(record)">设置密码</a-link>
+          <a-link
+            v-permission="['education:student:delete']"
+            :disabled="record.disabled"
+            status="danger"
+            @click="onDelete(record)"
+          >
+            删除
+          </a-link>
         </a-space>
       </template>
     </GiTable>
@@ -154,7 +140,7 @@ import { useDownload, useTable } from '@/hooks'
 import { useDict } from '@/hooks/app'
 import { isMobile } from '@/utils'
 import has from '@/utils/has'
-import { IconDown, IconEye, IconEdit, IconHistory, IconLock, IconDelete } from '@arco-design/web-vue/es/icon'
+import { IconEdit } from '@arco-design/web-vue/es/icon'
 
 defineOptions({ name: 'Student' })
 

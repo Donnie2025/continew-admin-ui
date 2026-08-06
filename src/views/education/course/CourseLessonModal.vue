@@ -297,7 +297,7 @@
             @change="handleMaterialLessonChange"
           >
             <a-option v-for="lesson in materialLessons" :key="lesson.id" :value="lesson.id">
-              {{ lesson.lessonName }}
+              {{ lesson.name }}
             </a-option>
           </a-select>
           <template v-if="lessonForm.lessonUrl" #extra>
@@ -322,8 +322,7 @@ import {
 import { searchTeachers, type TeacherResp } from '@/apis/education/teacher'
 import { getCourse, listCourseTeachers, type CourseTeacherResp } from '@/apis/education/course'
 import { listAgentOptions, type AgentOption } from '@/apis/education/agent'
-import { listAllMaterials, type MaterialResp } from '@/apis/education/material'
-import { listMaterialLessonsByMaterialId, type MaterialLessonResp } from '@/apis/education/materialLesson'
+import { listAllMaterials, listLessonsByMaterialId, type MaterialResp } from '@/apis/education/material'
 
 const visible = ref(false)
 const loading = ref(false)
@@ -350,7 +349,7 @@ const institutionList = ref<AgentOption[]>([])
 
 // 教材和课件
 const materials = ref<MaterialResp[]>([])
-const materialLessons = ref<MaterialLessonResp[]>([])
+const materialLessons = ref<MaterialResp[]>([])
 
 // 选中状态
 const selectedLessonIds = ref<string[]>([])
@@ -533,11 +532,11 @@ const handleMaterialChange = async (materialId: string) => {
   if (!materialId) {
     return
   }
-  
+
   // 加载该教材的课节列表
   materialLessonsLoading.value = true
   try {
-    const response = await listMaterialLessonsByMaterialId(materialId)
+    const response = await listLessonsByMaterialId(materialId)
     materialLessons.value = Array.isArray(response.data) ? response.data : []
   } catch (error) {
     console.error('加载教材课节列表失败:', error)

@@ -33,6 +33,10 @@
           <span style="font-size:13px;color:var(--color-text-2)">同步飞书</span>
           <a-switch v-model="enableFeishuSync" size="small" />
         </a-space>
+        <a-space style="margin-left: 4px">
+          <span style="font-size:13px;color:var(--color-text-2)">同步ClassIn</span>
+          <a-switch v-model="enableClassInSync" size="small" />
+        </a-space>
       </div>
     </div>
 
@@ -76,13 +80,13 @@
            @drop.prevent="onFileDrop">
         <div v-if="isDragging" class="drop-overlay">
           <div class="drop-overlay-inner">
-            <template v-if="selectedMaterial?.cloudId">
+            <template v-if="canUpload">
               <icon-cloud-upload style="font-size:48px;color:var(--color-primary-6)" />
-              <p>释放文件上传到 "{{ selectedMaterial.name }}"</p>
+              <p>释放文件上传到 "{{ selectedMaterial?.name || '当前节点' }}"</p>
             </template>
             <template v-else>
               <icon-warning style="font-size:48px;color:var(--color-warning-6)" />
-              <p>请先选择一个关联云盘的教材节点</p>
+              <p>{{ uploadWarningMessage }}</p>
             </template>
           </div>
         </div>
@@ -558,9 +562,16 @@ const searchLoading = ref(false)
 const filteredItems = computed(() => {
   if (isSearchMode.value) return searchResults.value
   const pid = selectedKeys.value[0] ?? null
-  return allMaterials.value.filter(item =>
+  const filtered = allMaterials.value.filter(item =>
     !pid ? (!item.pid || String(item.pid) === '0') : String(item.pid) === String(pid)
   )
+  // 按 sort 升序，sort 相同时按名称正向排序
+  return filtered.sort((a, b) => {
+    const sortA = Number(a.sort) || 0
+    const sortB = Number(b.sort) || 0
+    if (sortA !== sortB) return sortA - sortB
+    return (a.name || '').localeCompare(b.name || '', 'zh-CN')
+  })
 })
 
 watch(filteredItems, (items) => { pagination.total = items.length; pagination.current = 1 }, { immediate: true })
@@ -641,6 +652,46 @@ const maxSortInView = computed(() => {
 const selectedMaterial = computed(() =>
   selectedKeys.value[0] ? allMaterials.value.find(m => String(m.id) === String(selectedKeys.value[0])) : null
 )
+
+// 上传权限检查
+const canUpload = computed(() => {
+  const target = selectedMaterial.value
+  if (!target) {
+    // 如果两个开关都关闭，不允许上传
+    if (!enableClassInSync.value && !enableFeishuSync.value) return false
+    // 如果没有选择节点，至少需要根节点可用
+    return true
+  }
+
+  // 如果 ClassIn 同步开启，需要有 cloudId
+  if (enableClassInSync.value && !target.cloudId) return false
+
+  // 如果飞书同步开启，需要有 feishuFolderToken（或可以通过 ensureFeishuFolderChain 创建）
+  // 这里我们允许上传，因为 ensureFeishuFolderChain 会尝试创建
+  if (enableFeishuSync.value) return true
+
+  // 如果 ClassIn 同步开启且有 cloudId，允许上传
+  if (enableClassInSync.value && target.cloudId) return true
+
+  return false
+})
+
+const uploadWarningMessage = computed(() => {
+  if (!enableClassInSync.value && !enableFeishuSync.value) {
+    return '请至少开启一个同步开关（同步飞书或同步ClassIn）'
+  }
+
+  const target = selectedMaterial.value
+  if (!target) {
+    return '请先选择一个教材节点'
+  }
+
+  if (enableClassInSync.value && !target.cloudId) {
+    return '请先选择一个关联云盘的教材节点'
+  }
+
+  return '无法上传到当前节点'
+})
 
 const MaterialAddModalRef = ref<InstanceType<typeof MaterialAddModal>>()
 const onAdd = () => MaterialAddModalRef.value?.onAdd(
@@ -972,6 +1023,8 @@ let _uploadIdSeq = 0
 
 // 飞书同步开关：开启时飞书优先（飞书失败则整体失败）；关闭时仅上传 ClassIn
 const enableFeishuSync = ref(true)
+// ClassIn 同步开关：控制是否传递到 ClassIn 中
+const enableClassInSync = ref(true)
 
 const onDragEnter = (e: DragEvent) => {
   if (!e.dataTransfer?.types.includes('Files')) return
@@ -1022,7 +1075,7 @@ const processEntry = async (entry: FileSystemEntry, parentMatId: number | string
         if (!parentFeishuFolderToken) {
           throw new Error('父节点缺少飞书文件夹 token，无法同步飞书')
         }
-        const { data: uploadResult } = await uploadCloudFile(parentCloudFolderId, file, parentFeishuFolderToken)
+        const { data: uploadResult } = await uploadCloudFile(parentCloudFolderId, file, parentFeishuFolderToken, enableClassInSync.value)
         feishuFileToken = uploadResult.feishuFileToken || null
         lessonUrl = uploadResult.lessonUrl || null
         const fileId = uploadResult.classinFileId
@@ -1032,7 +1085,7 @@ const processEntry = async (entry: FileSystemEntry, parentMatId: number | string
         await addMaterial({ pid: Number(parentMatId), type: 'LESSON', name, cloudId: fileId, cloudName: file.name, lessonUrl, feishuFolderToken: feishuFileToken, isShow: true, sort })
       } else {
         // 仅 ClassIn 模式：忽略飞书
-        const { data: uploadResult } = await uploadCloudFile(parentCloudFolderId, file)
+        const { data: uploadResult } = await uploadCloudFile(parentCloudFolderId, file, undefined, enableClassInSync.value)
         const fileId = uploadResult.classinFileId
         const name = file.name.replace(/\.[^.]*$/, '')
         const sort = extractSortFromName(file.name)
@@ -1046,7 +1099,11 @@ const processEntry = async (entry: FileSystemEntry, parentMatId: number | string
     const item: UploadItem = { id: ++_uploadIdSeq, name: entry.name + '/', status: 'uploading' }
     uploadQueue.value.unshift(item)
     try {
-      const { data: folderId } = await createCloudFolder(parentCloudFolderId, entry.name)
+      let folderId: string | null = null
+      if (enableClassInSync.value) {
+        const { data: folderIdData } = await createCloudFolder(parentCloudFolderId, entry.name, enableClassInSync.value)
+        folderId = folderIdData
+      }
       const sort = extractSortFromName(entry.name)
 
       let feishuFolderToken: string | null = null
@@ -1073,8 +1130,25 @@ const processEntry = async (entry: FileSystemEntry, parentMatId: number | string
 const onFileDrop = async (e: DragEvent) => {
   dragCounter.value = 0
   isDragging.value = false
+
+  // 检查是否可以上传
+  if (!canUpload.value) {
+    Message.warning(uploadWarningMessage.value)
+    return
+  }
+
   const target = selectedMaterial.value
-  if (!target?.cloudId) { Message.warning('请先选择一个关联云盘的教材节点'); return }
+  if (!target) {
+    Message.warning('请先选择一个教材节点')
+    return
+  }
+
+  // 如果 ClassIn 同步开启，必须有 cloudId
+  if (enableClassInSync.value && !target.cloudId) {
+    Message.warning('请先选择一个关联云盘的教材节点')
+    return
+  }
+
   const items = Array.from(e.dataTransfer?.items ?? [])
   const entries = items.map(i => i.webkitGetAsEntry?.()).filter((x): x is FileSystemEntry => !!x)
   if (!entries.length) return
@@ -1114,7 +1188,7 @@ const onFileDrop = async (e: DragEvent) => {
   }
 
   for (const entry of entries) {
-    await processEntry(entry, target.id, target.cloudId, feishuFolderToken)
+    await processEntry(entry, target.id, target.cloudId || '', feishuFolderToken)
   }
   if (uploadQueue.value.some(i => i.status === 'done')) { loadTree() }
 }

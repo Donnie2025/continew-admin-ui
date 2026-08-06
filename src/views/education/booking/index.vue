@@ -13,8 +13,12 @@
       @refresh="search"
     >
       <template #toolbar-left>
+        <a-select v-model="queryForm.timeStatus" placeholder="请选择状态" style="width: 120px" @change="handleTimeStatusChange">
+          <a-option value="notStarted">未开始</a-option>
+          <a-option value="finished">已结束</a-option>
+        </a-select>
 	    <a-input-search v-model="queryForm.studentName" placeholder="请输入所属学生姓名" allow-clear @search="search" />
-	    <a-input-search v-model="queryForm.cardName" placeholder="请输入预约会员卡名称" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.teacherName" placeholder="请输入老师名字" allow-clear @search="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -69,8 +73,9 @@ defineOptions({ name: 'Booking' })
 
 const queryForm = reactive<BookingQuery>({
   studentName: undefined,
-  cardName: undefined,
-  sort: ['id,desc']
+  teacherName: undefined,
+  timeStatus: 'notStarted',
+  sort: ['slotDate,asc', 'slotTime,asc']
 })
 
 const {
@@ -81,10 +86,10 @@ const {
   handleDelete
 } = useTable((page) => listBooking({ ...queryForm, ...page }), { immediate: true })
 const columns: TableInstance['columns'] = [
-  { title: '姓名', dataIndex: 'studentName', slotName: 'studentName' },  
+  { title: '姓名', dataIndex: 'studentName', slotName: 'studentName' },
   { title: '时间', dataIndex: 'slotDate', slotName: 'courseDateTime' },
   { title: '手机号', dataIndex: 'studentPhone', slotName: 'studentPhone' },
-  { title: '会员卡', dataIndex: 'cardName', slotName: 'cardName' },
+  { title: '老师', dataIndex: 'teacherName', slotName: 'teacherName' },
   { title: '预约教材', dataIndex: 'materialName', slotName: 'materialName' },
   { title: '课节', dataIndex: 'lessonName', slotName: 'lessonName' },
   { title: '预约备注', dataIndex: 'remark', slotName: 'remark' },
@@ -99,10 +104,23 @@ const columns: TableInstance['columns'] = [
   }
 ]
 
+// 处理时间状态变化
+const handleTimeStatusChange = () => {
+  // 根据状态切换排序方式
+  if (queryForm.timeStatus === 'notStarted') {
+    queryForm.sort = ['slotDate,asc', 'slotTime,asc'] // 未开始：升序
+  } else if (queryForm.timeStatus === 'finished') {
+    queryForm.sort = ['slotDate,desc', 'slotTime,desc'] // 已结束：降序
+  }
+  search()
+}
+
 // 重置
 const reset = () => {
   queryForm.studentName = undefined
-  queryForm.cardName = undefined
+  queryForm.teacherName = undefined
+  queryForm.timeStatus = 'notStarted'
+  queryForm.sort = ['slotDate,asc', 'slotTime,asc']
   search()
 }
 

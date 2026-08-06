@@ -117,3 +117,13 @@ export function deleteFixedBooking(id: string) {
 export function listFixedByTeacherId(teacherId: string) {
   return http.get<FixedResp[]>(`${BASE_URL}/teacher/${teacherId}`)
 }
+
+/** @desc 根据学生ID查询固定课预约列表 */
+export function listFixedByStudentId(studentId: string) {
+  return http.get<FixedResp[]>(`${BASE_URL}/student/${studentId}`)
+}
+
+/** @desc 根据学生ID查询固定课预约记录列表 */
+export function listBookingRecordsByStudentId(studentId: string) {
+  return http.get<any[]>(`${BASE_URL}/student/${studentId}/records`)
+}

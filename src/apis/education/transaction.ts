@@ -8,12 +8,12 @@ export interface TransactionResp {
   stuId: string
   stuName: string
   cardId: string
-  cardName: string
+  cardTitle: string
   type: string
   debitAmount: string
   creditAmount: string
-  debitDays: string
-  creditDays: string
+  debitDays: number
+  creditDays: number
   beforeAmount: string
   afterAmount: string
   actualAmount: string
@@ -22,7 +22,6 @@ export interface TransactionResp {
   operatorName: string
   createUserString: string
   updateUserString: string
-  disabled: boolean
 }
 export interface TransactionDetailResp {
   id: string
@@ -30,7 +29,7 @@ export interface TransactionDetailResp {
   stuId: string
   stuName: string
   cardId: string
-  cardName: string
+  cardTitle: string
   type: string
   debitAmount: string
   creditAmount: string

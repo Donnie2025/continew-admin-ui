@@ -62,9 +62,12 @@
       <div class="schedule-grid">
         <!-- 添加星期几显示行 -->
         <div class="weekday-header">
-          <div v-for="day in weekDays" :key="day.date" class="weekday-cell">
-            <span class="weekday-name">{{ day.label }}</span>
-            <span class="date-label">{{ day.date }}</span>
+          <div v-for="(day, dayIndex) in weekDays" :key="day.date" class="weekday-cell" :class="{ 'is-today': isToday(day.fullDate) }">
+            <div class="weekday-info">
+              <span class="weekday-name">{{ day.label }}</span>
+              <span class="date-label">{{ day.date }}</span>
+            </div>
+            <span class="booked-count">已约{{ getBookedCountForDay(dayIndex) }}</span>
           </div>
         </div>
         <div class="week-header">
@@ -119,7 +122,30 @@
       <div class="detail-title">
         <div class="date-time">{{ selectedCourse.dateStr }} {{ selectedCourse.startTime }}</div>
         <div class="teacher">授课老师：{{ currentTeacherName }}</div>
-        <div class="student-count">学生数量：{{ selectedCourse.studentCount || 1 }}</div>
+        <div class="student-count">
+          <span>学生数量：</span>
+          <template v-if="!isEditingStudentCount">
+            <span>{{ selectedCourse.studentCount || 1 }}</span>
+            <a-button type="text" size="small" @click="startEditStudentCount" style="margin-left: 8px;">
+              <icon-edit />
+            </a-button>
+          </template>
+          <template v-else>
+            <a-input-number
+              v-model="tempStudentCount"
+              :min="1"
+              :precision="0"
+              size="small"
+              style="width: 80px; margin: 0 8px;"
+            />
+            <a-button type="primary" size="small" @click="saveStudentCount">
+              <icon-check />
+            </a-button>
+            <a-button type="text" size="small" @click="cancelEditStudentCount">
+              <icon-close />
+            </a-button>
+          </template>
+        </div>
       </div>
       <div class="detail-actions">
         <a-button type="primary" @click="handleAddStudentReservation">添加会员预约</a-button>
@@ -154,80 +180,90 @@
     <a-tabs default-active-key="2" class="detail-tabs">
       <a-tab-pane key="2" title="已确认预约">
         <div v-if="selectedCourse && ((selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0) || (selectedCourse.studentName && selectedCourse.studentName !== '未被预约'))" class="detail-table-custom">
-          <div class="table-row">
-            <div class="table-cell info">
-              <div class="cell-title">预约信息</div>
-              <div class="cell-content">
-                <!-- 如果有详细预约信息，显示完整信息 -->
-                <template v-if="selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0">
-                  <div v-for="(booking, index) in selectedCourse.bookingDetails" :key="index" class="booking-item">
-                    <div v-if="index > 0" class="booking-divider"></div>
-                    <strong>预约学生：</strong>{{ booking.studentName || '--' }}<br />
-                    <strong>手机号：</strong>{{ booking.studentPhone || '--' }}<br />
-                    <strong>使用会员卡：</strong>{{ booking.cardName || '--' }}<br />
-                    <strong>预约备注：</strong>{{ booking.remark || '--' }}<br />
-                    <strong>是否允许会员取消：</strong>是<br />
-                    <strong>操作人：</strong>{{ booking.operatorName || '--' }}<br />
-                    <strong>操作时间：</strong>{{ booking.operateTime || '--' }}
-                  </div>
-                </template>
-                <!-- 如果有学生列表但无详细信息，显示基本信息 -->
-                <template v-else-if="selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0">
-                  <div>
-                    <strong>预约学生：</strong>
-                    <div v-for="(student, index) in selectedCourse.studentNameList" :key="index" class="student-item">
-                      {{ student }}
+          <!-- 如果有详细预约信息，每个预约单独显示一行 -->
+          <template v-if="selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0">
+            <div v-for="(booking, index) in selectedCourse.bookingDetails" :key="index" class="table-row" :style="index > 0 ? 'margin-top: 12px' : ''">
+              <div class="table-cell info">
+                <div class="cell-title">预约信息</div>
+                <div class="cell-content">
+                  <strong>预约学生：</strong>{{ booking.studentName || '--' }}<br />
+                  <strong>手机号：</strong>{{ booking.studentPhone || '--' }}<br />
+                  <strong>使用会员卡：</strong>{{ booking.cardName || '--' }}<br />
+                  <strong>预约备注：</strong>{{ booking.remark || '--' }}<br />
+                  <strong>是否允许会员取消：</strong>是<br />
+                  <strong>操作人：</strong>{{ booking.operatorName || '--' }}<br />
+                  <strong>操作时间：</strong>{{ booking.operateTime || '--' }}
+                </div>
+              </div>
+              <div class="table-cell material">
+                <div class="cell-title">教材</div>
+                <div class="cell-content">
+                  <template v-if="booking.materialName">
+                    <strong>教材名称：</strong>{{ booking.materialName }}<br />
+                    <strong>教材编码：</strong>{{ booking.materialCode || '--' }}<br />
+                    <strong>教材级别：</strong>{{ booking.materialLevel || '--' }}<br />
+                    <strong>课节名称：</strong>{{ booking.lessonName || '--' }}
+                  </template>
+                  <template v-else>
+                    暂无教材信息
+                  </template>
+                </div>
+              </div>
+              <div class="table-cell action">
+                <div class="cell-title">操作</div>
+                <div class="cell-content">
+                  <a class="table-link" @click="handleEditBooking(booking)">修改</a>
+                  <a class="table-link" style="margin-left: 16px;" @click="handleCancelBooking(booking)">取消预约</a>
+                </div>
+              </div>
+            </div>
+          </template>
+          <!-- 如果只有基本信息，显示旧的布局 -->
+          <template v-else>
+            <div class="table-row">
+              <div class="table-cell info">
+                <div class="cell-title">预约信息</div>
+                <div class="cell-content">
+                  <template v-if="selectedCourse.studentNameList && selectedCourse.studentNameList.length > 0">
+                    <div>
+                      <strong>预约学生：</strong>
+                      <div v-for="(student, index) in selectedCourse.studentNameList" :key="index" class="student-item">
+                        {{ student }}
+                      </div>
                     </div>
-                  </div>
-                  <strong>手机号：</strong>--<br />
-                  <strong>使用会员卡：</strong>--<br />
-                  <strong>预约备注：</strong>--<br />
-                  <strong>是否允许会员取消：</strong>是<br />
-                  <strong>操作人：</strong>--<br />
-                  <strong>操作时间：</strong>--
-                </template>
-                <!-- 否则显示单个学生的基本信息 -->
-                <template v-else>
-                  <strong>会员：</strong>{{ selectedCourse.studentName }}<br />
-                  <strong>手机号：</strong>--<br />
-                  <strong>使用会员卡：</strong>--<br />
-                  <strong>预约备注：</strong>--<br />
-                  <strong>是否允许会员取消：</strong>是<br />
-                  <strong>操作人：</strong>--<br />
-                  <strong>操作时间：</strong>--
-                </template>
+                    <strong>手机号：</strong>--<br />
+                    <strong>使用会员卡：</strong>--<br />
+                    <strong>预约备注：</strong>--<br />
+                    <strong>是否允许会员取消：</strong>是<br />
+                    <strong>操作人：</strong>--<br />
+                    <strong>操作时间：</strong>--
+                  </template>
+                  <template v-else>
+                    <strong>会员：</strong>{{ selectedCourse.studentName }}<br />
+                    <strong>手机号：</strong>--<br />
+                    <strong>使用会员卡：</strong>--<br />
+                    <strong>预约备注：</strong>--<br />
+                    <strong>是否允许会员取消：</strong>是<br />
+                    <strong>操作人：</strong>--<br />
+                    <strong>操作时间：</strong>--
+                  </template>
+                </div>
               </div>
-            </div>
-            <div class="table-cell material">
-              <div class="cell-title">教材</div>
-              <div class="cell-content">
-                <template v-if="selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0">
-                  <div v-for="(booking, index) in selectedCourse.bookingDetails" :key="index" class="material-item">
-                    <div v-if="index > 0" class="material-divider"></div>
-                    <template v-if="booking.materialName">
-                      <strong>教材名称：</strong>{{ booking.materialName }}<br />
-                      <strong>教材编码：</strong>{{ booking.materialCode || '--' }}<br />
-                      <strong>教材级别：</strong>{{ booking.materialLevel || '--' }}<br />
-                      <strong>课节名称：</strong>{{ booking.lessonName || '--' }}
-                    </template>
-                    <template v-else>
-                      暂无教材信息
-                    </template>
-                  </div>
-                </template>
-                <template v-else>
+              <div class="table-cell material">
+                <div class="cell-title">教材</div>
+                <div class="cell-content">
                   暂无教材信息
-                </template>
+                </div>
+              </div>
+              <div class="table-cell action">
+                <div class="cell-title">操作</div>
+                <div class="cell-content">
+                  <a class="table-link" @click="handleEditBooking(selectedCourse.bookingDetails && selectedCourse.bookingDetails.length > 0 ? selectedCourse.bookingDetails[0] : null)">修改</a>
+                  <a class="table-link" style="margin-left: 16px;" @click="handleCancelBooking()">取消预约</a>
+                </div>
               </div>
             </div>
-            <div class="table-cell action">
-              <div class="cell-title">操作</div>
-              <div class="cell-content">
-                <a class="table-link">修改</a>
-                <a class="table-link" style="margin-left: 16px;" @click="handleCancelBooking">取消预约</a>
-              </div>
-            </div>
-          </div>
+          </template>
         </div>
         <div v-else class="empty-reservations">
           <a-empty description="暂无预约信息" />
@@ -390,7 +426,7 @@
   <!-- 添加会员预约弹窗 -->
   <a-modal
     v-model:visible="studentReservationVisible"
-    title="添加会员预约"
+    :title="isEditBookingMode ? '修改预约' : '添加会员预约'"
     :mask-closable="false"
     :width="700"
     @cancel="handleStudentReservationCancel"
@@ -434,7 +470,7 @@
                 :value="card.id"
                 :disabled="card.disabled"
               >
-                {{ card.cardTitle }} · {{ ['TL','TU'].includes(card.cardType) ? card.balance + '次' : '₱' + card.balance }}
+                余额：{{ card.balance }} 次
                 <span v-if="card.disabled" style="color: #ff4d4f; margin-left: 8px;">
                   {{ card.balance <= 0 ? '余额不足' : '已停用' }}
                 </span>
@@ -447,25 +483,37 @@
         </a-form-item>
 
         <a-form-item field="materialId" label="教材：">
-          <a-select v-model="reservationForm.materialId" placeholder="请选择" @change="onMaterialChange">
+          <a-select
+            v-model="reservationForm.materialId"
+            placeholder="请选择教材（支持搜索）"
+            allow-search
+            allow-clear
+            @change="onMaterialChange"
+          >
             <a-option
               v-for="material in materials"
               :key="material.id"
               :value="material.id"
             >
-              {{ material.name }}{{ material.level ? ' - ' + material.level : '' }}
+              {{ material.displayName }}
             </a-option>
           </a-select>
         </a-form-item>
 
         <a-form-item field="lessonId" label="课节：">
-          <a-select v-model="reservationForm.lessonId" placeholder="请先选择教材" :disabled="!materialLessons.length">
+          <a-select
+            v-model="reservationForm.lessonId"
+            placeholder="请先选择教材（支持搜索）"
+            allow-search
+            allow-clear
+            :disabled="!materialLessons.length"
+          >
             <a-option
               v-for="lesson in materialLessons"
               :key="lesson.id"
               :value="lesson.id"
             >
-              {{ lesson.lessonName }}
+              {{ lesson.name }}
             </a-option>
           </a-select>
         </a-form-item>
@@ -485,16 +533,15 @@
 <script setup lang="ts">
 import { ref, reactive, nextTick, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
-import { IconLeft, IconRight } from '@arco-design/web-vue/es/icon'
+import { IconLeft, IconRight, IconEdit, IconCheck, IconClose } from '@arco-design/web-vue/es/icon'
 import { Message, Modal } from '@arco-design/web-vue'
 import { listActiveTeachers } from '@/apis/education/teacher'
-import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableSlots } from '@/apis/education/slot'
+import { batchCreateSlot, listSlot, getSlot, deleteSlot, addSlot, listAvailableSlots, updateSlot } from '@/apis/education/slot'
 import dayjs from 'dayjs'
 import { searchMembers, getMemberCards } from '@/apis/member/index'
-import { listMaterial } from '@/apis/education/material'
-import { listMaterialLessonsByMaterialId } from '@/apis/education/materialLesson'
+import { listMaterial, listLessonsByMaterialId } from '@/apis/education/material'
 import { createReservation } from '@/apis/education/reservation'
-import { cancelBookingBySlotAndStudent, importBookings } from '@/apis/education/booking'
+import { cancelBookingBySlotAndStudent, importBookings, updateBooking, updateBookingInfo, getLastBookingByStudent } from '@/apis/education/booking'
 
 // 导入预约
 const importVisible = ref(false)
@@ -838,6 +885,8 @@ const getSlotStudent = (timeSlot: string, dayIndex: number) => {
 // 课程详情相关
 const courseDetailVisible = ref(false)
 const selectedCourse = ref<CourseItem | null>(null)
+const isEditingStudentCount = ref(false)
+const tempStudentCount = ref(1)
 
 // 处理课程点击
 const handleCourseClick = (timeSlot: string, dayIndex: number) => {
@@ -914,40 +963,105 @@ const handleModalCancel = () => {
 }
 
 // 处理取消预约
-const handleCancelBooking = async () => {
-  if (!selectedCourse.value || !selectedCourse.value.bookingDetails || selectedCourse.value.bookingDetails.length === 0) {
-    Message.error('没有找到预约信息');
+const handleCancelBooking = async (booking?: any) => {
+  if (!selectedCourse.value) {
+    Message.error('没有找到课程信息');
     return;
   }
 
-  // 显示确认对话框
+  // 如果没有传入booking参数，尝试从bookingDetails获取第一个
+  let targetBooking = booking;
+  if (!targetBooking) {
+    if (selectedCourse.value.bookingDetails && selectedCourse.value.bookingDetails.length > 0) {
+      targetBooking = selectedCourse.value.bookingDetails[0];
+    } else {
+      Message.error('没有找到预约信息');
+      return;
+    }
+  }
+
+  // 显示确认对话框，明确显示要取消的学生姓名
   Modal.confirm({
     title: '确认取消预约',
-    content: '确定要取消这个预约吗？取消后将无法恢复。',
+    content: `确定要取消 ${targetBooking.studentName || '该学生'} 的预约吗？取消后将无法恢复。`,
     okText: '确认取消',
     cancelText: '取消',
     onOk: async () => {
       try {
-        const booking = selectedCourse.value.bookingDetails[0]; // 取第一个预约记录
-        
         // 调用取消预约API
-        await cancelBookingBySlotAndStudent(selectedCourse.value.id, booking.studentId.toString());
-        
+        await cancelBookingBySlotAndStudent(selectedCourse.value.id, targetBooking.studentId.toString());
+
         Message.success('预约取消成功');
-        
+
         // 关闭弹窗
         courseDetailVisible.value = false;
         selectedCourse.value = null;
-        
+
         // 重新加载课程数据
         loadCourseData();
-        
+
       } catch (error) {
         console.error('取消预约失败:', error);
         Message.error('取消预约失败，请稍后重试');
       }
     }
   });
+}
+
+// 学生数量编辑相关函数
+const startEditStudentCount = () => {
+  tempStudentCount.value = selectedCourse.value?.studentCount || 1
+  isEditingStudentCount.value = true
+}
+
+const cancelEditStudentCount = () => {
+  isEditingStudentCount.value = false
+  tempStudentCount.value = selectedCourse.value?.studentCount || 1
+}
+
+const saveStudentCount = async () => {
+  if (!selectedCourse.value?.id) {
+    Message.error('课程信息不完整')
+    return
+  }
+
+  if (tempStudentCount.value < 1) {
+    Message.error('学生数量不能小于1')
+    return
+  }
+
+  try {
+    const updateData = {
+      teacherId: selectedCourse.value.teacherId,
+      teacherName: currentTeacherName.value,
+      startDate: selectedCourse.value.startDate,
+      startTime: selectedCourse.value.startTime,
+      duration: selectedCourse.value.duration,
+      isOnline: selectedCourse.value.isOnline,
+      studentCount: tempStudentCount.value
+    }
+
+    const res = await updateSlot(updateData, selectedCourse.value.id)
+
+    if (res.success) {
+      Message.success('学生数量更新成功')
+
+      // 更新当前显示的课程信息
+      if (selectedCourse.value) {
+        selectedCourse.value.studentCount = tempStudentCount.value
+      }
+
+      isEditingStudentCount.value = false
+
+      // 重新加载课程数据以保持数据一致性
+      loadCourseData()
+    } else {
+      Message.error('更新失败: ' + res.msg)
+    }
+  } catch (error) {
+    console.error('更新学生数量失败:', error)
+    Message.error('更新失败，请稍后重试')
+  }
 }
 
 // 添加/编辑课程相关
@@ -1339,8 +1453,31 @@ const isSlotOnline = (timeSlot: string, dayIndex: number): boolean => {
   return !!slot?.isOnline
 }
 
+// 获取某一天已预约的课程数量
+const getBookedCountForDay = (dayIndex: number): number => {
+  const day = weekDays.value[dayIndex]
+  if (!day) return 0
+
+  const formattedDate = dayjs(day.fullDate).format('YYYYMMDD')
+
+  // 筛选出该天所有已预约的课程
+  return courseSlots.filter(slot => {
+    return slot.startDate === formattedDate && slot.status === 'booked'
+  }).length
+}
+
+// 判断是否是今天
+const isToday = (date: Date): boolean => {
+  const today = new Date()
+  return date.getDate() === today.getDate() &&
+         date.getMonth() === today.getMonth() &&
+         date.getFullYear() === today.getFullYear()
+}
+
 // 添加会员预约相关
 const studentReservationVisible = ref(false)
+const isEditBookingMode = ref(false) // 标识是否为编辑预约模式
+const editingBookingId = ref<string | null>(null) // 正在编辑的预约ID
 const reservationForm = reactive({
   studentId: null as string | null,
   cardId: '' as string,
@@ -1363,7 +1500,11 @@ const handleAddStudentReservation = () => {
     Message.error('请先选择一个课时')
     return
   }
-  
+
+  // 重置编辑模式
+  isEditBookingMode.value = false
+  editingBookingId.value = null
+
   // 重置表单
   Object.assign(reservationForm, {
     studentId: null,
@@ -1377,32 +1518,110 @@ const handleAddStudentReservation = () => {
   searchedMembers.value = []
   memberCards.value = []
   cardWarning.value = false
-  
-  // 预加载一些会员数据，以便用户可以直接选择
-  handleSearchMember('');
-  
+
   // 加载教材列表
   loadMaterials()
-  
+
   // 显示弹窗
   studentReservationVisible.value = true
+
+  // 从缓存中加载上次预约的会员信息
+  nextTick(() => {
+    const cachedMemberPhone = localStorage.getItem('lastReservationMemberPhone')
+    const cachedStudentId = localStorage.getItem('lastReservationStudentId')
+
+    if (cachedMemberPhone && cachedStudentId) {
+      console.log('从缓存加载会员信息:', { cachedStudentId, cachedMemberPhone })
+      // 使用手机号搜索该会员
+      memberSearchLoading.value = true
+      searchMembers(cachedMemberPhone)
+        .then(res => {
+          console.log('搜索会员结果:', res)
+          if (res && res.data && res.data.data && Array.isArray(res.data.data)) {
+            // 先过滤会员列表，移除异常数据
+            const validMembers = filterValidMembers(res.data.data)
+            searchedMembers.value = validMembers
+            console.log('过滤后的会员列表:', searchedMembers.value)
+
+            const cachedMember = validMembers.find(m => String(m.id) === String(cachedStudentId))
+            console.log('找到的缓存会员:', cachedMember)
+
+            if (cachedMember) {
+              // 使用 setTimeout 确保异步更新完成
+              setTimeout(() => {
+                // 设置选中的会员 - 使用原始的 member.id，保持类型一致
+                reservationForm.studentId = cachedMember.id
+                selectedMember.value = cachedMember
+                console.log('设置会员ID:', cachedMember.id, '类型:', typeof cachedMember.id)
+                console.log('当前 searchedMembers:', searchedMembers.value.map(m => ({ id: m.id, name: m.name })))
+                // 加载会员卡会由watch自动触发
+              }, 100)
+            }
+          }
+        })
+        .catch(error => {
+          console.error('加载缓存的会员信息失败:', error)
+        })
+        .finally(() => {
+          memberSearchLoading.value = false
+        })
+    } else {
+      // 如果没有缓存，预加载一些会员数据
+      handleSearchMember('')
+    }
+  })
 }
 
 // 加载教材列表
-const loadMaterials = () => {
-  listMaterial({ page: 1, size: 1000 } as any)
-    .then(res => {
-      if (res && res.data) {
-        const data = res.data as any
-        materials.value = Array.isArray(data) ? data : (data.list || [])
+const loadMaterials = async () => {
+  try {
+    // 一次性查询所有 BOOK 和 LEVEL 数据
+    const [bookRes, levelRes] = await Promise.all([
+      listMaterial({ page: 1, size: 1000, type: 'BOOK' } as any),
+      listMaterial({ page: 1, size: 1000, type: 'LEVEL' } as any)
+    ])
+
+    const books = bookRes?.data ? (Array.isArray(bookRes.data) ? bookRes.data : (bookRes.data.list || [])) : []
+    const allLevels = levelRes?.data ? (Array.isArray(levelRes.data) ? levelRes.data : (levelRes.data.list || [])) : []
+
+    // 组装数据
+    const materialWithLevels: any[] = []
+
+    books.forEach((book: any) => {
+      // 找到该 BOOK 下的所有 LEVEL（pid 等于 book.id）
+      const levels = allLevels.filter((level: any) => String(level.pid) === String(book.id))
+
+      if (levels.length > 0) {
+        // 如果有 LEVEL，为每个 LEVEL 创建一个选项，格式：教材名-级别名
+        levels.forEach((level: any) => {
+          materialWithLevels.push({
+            id: level.id,  // 使用 LEVEL 的 ID
+            name: level.name,
+            displayName: `${book.name}-${level.name}`,  // 组合显示名称
+            bookId: book.id,
+            bookName: book.name,
+            levelName: level.name,
+            type: 'LEVEL'
+          })
+        })
       } else {
-        materials.value = []
+        // 如果没有 LEVEL，直接使用 BOOK
+        materialWithLevels.push({
+          id: book.id,
+          name: book.name,
+          displayName: book.name,
+          bookId: book.id,
+          bookName: book.name,
+          type: 'BOOK'
+        })
       }
     })
-    .catch(error => {
-      console.error('加载教材列表失败:', error)
-      materials.value = []
-    })
+
+    materials.value = materialWithLevels
+  } catch (error) {
+    console.error('加载教材列表失败:', error)
+    materials.value = []
+  }
 }
 
 // 教材切换时加载课节列表
@@ -1410,11 +1629,18 @@ const onMaterialChange = (materialId: any) => {
   reservationForm.lessonId = null
   materialLessons.value = []
   if (!materialId) return
-  listMaterialLessonsByMaterialId(String(materialId))
+  listLessonsByMaterialId(String(materialId))
     .then(res => {
       if (res && res.data) {
         const data = res.data as any
-        materialLessons.value = Array.isArray(data) ? data : (data.list || [])
+        let lessons = Array.isArray(data) ? data : (data.list || [])
+        // 按照课节名称（教材名字）排序
+        lessons = lessons.sort((a: any, b: any) => {
+          const nameA = (a.name || '').toString()
+          const nameB = (b.name || '').toString()
+          return nameA.localeCompare(nameB, 'zh-CN', { numeric: true, sensitivity: 'base' })
+        })
+        materialLessons.value = lessons
       } else {
         materialLessons.value = []
       }
@@ -1435,24 +1661,39 @@ const debounce = (fn: Function, delay: number) => {
   }
 }
 
+// 过滤有效的会员数据（过滤掉name为纯数字或空值的异常数据）
+const filterValidMembers = (members: any[]) => {
+  if (!Array.isArray(members)) return [];
+
+  return members.filter(member => {
+    // 如果name不存在、为空、或者不是字符串类型，则过滤掉
+    if (!member.name || typeof member.name !== 'string') return false;
+    // 检查是否为纯数字（包括字符串形式的数字）
+    const isNumericOnly = /^\d+$/.test(member.name.trim());
+    return !isNumericOnly;
+  });
+}
+
 // 搜索会员
 const handleSearchMember = debounce((keyword: string) => {
   memberSearchLoading.value = true;
-  
+
   searchMembers(keyword)
     .then(res => {
       try {
         // 从图片看到，API返回格式是：
         // { code: "0", msg: "ok", success: true, data: { data: [...会员数组...] } }
+        let members = [];
         if (res && res.data && res.data.data && Array.isArray(res.data.data)) {
           // 根据图片显示，会员数据在 res.data.data 数组中
-          searchedMembers.value = res.data.data;
+          members = res.data.data;
         } else if (res && res.data && Array.isArray(res.data)) {
           // 兼容直接返回数组的情况
-          searchedMembers.value = res.data;
-      } else {
-          searchedMembers.value = [];
+          members = res.data;
         }
+
+        // 过滤掉name为纯数字或空值的异常数据
+        searchedMembers.value = filterValidMembers(members);
       } catch (error) {
         console.error('处理搜索结果出错:', error);
         searchedMembers.value = [];
@@ -1473,44 +1714,64 @@ watch(() => reservationForm.studentId, (newVal) => {
     const member = searchedMembers.value.find(item => String(item.id) === String(newVal));
     if (member) {
       selectedMember.value = member;
+      // 切换用户时先清空教材和课节信息
+      reservationForm.materialId = null;
+      reservationForm.lessonId = null;
+      materialLessons.value = [];
       loadMemberCards(newVal);
+      // 加载会员最后一节课的预约记录，智能选择教材和课节
+      loadLastBookingAndSetNext(newVal);
     }
   } else {
     selectedMember.value = null;
     memberCards.value = [];
+    // 清空教材和课节选择
+    reservationForm.materialId = null;
+    reservationForm.lessonId = null;
+    materialLessons.value = [];
   }
 }, { immediate: false });
 
 // 加载会员卡
 const loadMemberCards = (studentId: string | number) => {
   if (!studentId) return
-  
+
   memberCards.value = []
   cardWarning.value = false
   console.log('开始加载会员卡，会员ID:', studentId)
-  
+
   getMemberCards(studentId, selectedCourse.value?.teacherId)
     .then(res => {
       console.log('会员卡加载结果:', res)
+      console.log('会员卡原始数据:', JSON.stringify(res.data, null, 2))
       if (res && res.data && res.data.length > 0) {
         memberCards.value = res.data.map(card => {
           // 确保id是字符串类型
           const cardId = card.id ? String(card.id) : '';
+          console.log('处理会员卡:', {
+            id: card.id,
+            cardTitle: card.cardTitle,
+            cardName: card.cardName,
+            name: card.name,
+            title: card.title,
+            cardType: card.cardType,
+            balance: card.balance
+          })
           return {
             ...card,
             id: cardId,
             disabled: card.status === 0 || card.balance <= 0
           };
         });
-        
+
         cardWarning.value = false
-        
+
         console.log('处理后的会员卡数据:', memberCards.value)
-        
+
         // 自动选择会员卡
         const availableCards = memberCards.value.filter(card => !card.disabled);
         console.log('可用会员卡:', availableCards)
-        
+
         if (availableCards.length > 0) {
           reservationForm.cardId = availableCards[0].id;
           console.log('自动选择会员卡:', reservationForm.cardId)
@@ -1530,6 +1791,71 @@ const loadMemberCards = (studentId: string | number) => {
       memberCards.value = []
       cardWarning.value = true
     })
+}
+
+// 加载会员最后一节课的预约记录，并智能选择下一节课的教材和课节
+const loadLastBookingAndSetNext = async (studentId: string | number) => {
+  if (!studentId) return;
+
+  try {
+    console.log('开始获取会员最后一节课记录，会员ID:', studentId);
+    const res = await getLastBookingByStudent(studentId);
+
+    if (res && res.data) {
+      const lastBooking = res.data;
+      console.log('获取到最后一节课记录:', lastBooking);
+
+      // 如果有教材和课节信息，自动加载下一节课
+      if (lastBooking.materialId && lastBooking.lessonName) {
+        // 设置教材
+        reservationForm.materialId = lastBooking.materialId;
+
+        // 加载该教材的所有课节
+        const lessonsRes = await listLessonsByMaterialId(String(lastBooking.materialId));
+        if (lessonsRes && lessonsRes.data) {
+          const data = lessonsRes.data as any;
+          let lessons = Array.isArray(data) ? data : (data.list || []);
+          // 按照课节名称（教材名字）排序
+          lessons = lessons.sort((a: any, b: any) => {
+            const nameA = (a.name || '').toString()
+            const nameB = (b.name || '').toString()
+            return nameA.localeCompare(nameB, 'zh-CN', { numeric: true, sensitivity: 'base' })
+          })
+          materialLessons.value = lessons;
+
+          // 查找当前课节在列表中的位置
+          const currentLessonIndex = materialLessons.value.findIndex(
+            lesson => lesson.name === lastBooking.lessonName
+          );
+
+          console.log('当前课节索引:', currentLessonIndex, '课节总数:', materialLessons.value.length);
+
+          // 如果找到了当前课节，并且还有下一节课
+          if (currentLessonIndex !== -1 && currentLessonIndex < materialLessons.value.length - 1) {
+            // 自动选择下一节课
+            const nextLesson = materialLessons.value[currentLessonIndex + 1];
+            reservationForm.lessonId = nextLesson.id;
+            console.log('自动选择下一节课:', nextLesson.name, 'ID:', nextLesson.id);
+            Message.success(`已自动加载下一节课：${nextLesson.name}`);
+          } else if (currentLessonIndex === materialLessons.value.length - 1) {
+            // 如果是最后一节课，也自动选中最后一节（让用户知道已经是最后一节）
+            reservationForm.lessonId = lastBooking.lessonId;
+            console.log('当前已是最后一节课');
+            Message.info('该会员已完成所有课节');
+          } else {
+            console.log('未找到匹配的课节');
+          }
+        }
+      } else {
+        console.log('最后一节课没有教材或课节信息');
+      }
+    } else {
+      console.log('该会员没有历史预约记录');
+    }
+  } catch (error) {
+    console.error('获取会员最后一节课记录失败:', error);
+    // 静默失败，不影响用户操作
+  }
 }
 
 // 刷新会员卡
@@ -1552,27 +1878,32 @@ const goToCardManagement = () => {
 
 // 提交预约
 const handleStudentReservationOk = () => {
+  // 调试日志
+  console.log('=== 提交预约 ===')
+  console.log('isEditBookingMode:', isEditBookingMode.value)
+  console.log('editingBookingId:', editingBookingId.value)
+
   // 表单验证
   if (!reservationForm.studentId) {
     Message.error('请选择会员')
     return
   }
-  
+
   if (!reservationForm.cardId) {
     Message.error('请选择会员卡')
     return
   }
-  
-  if (!selectedCourse.value || !selectedCourse.value.id) {
+
+  if (!isEditBookingMode.value && (!selectedCourse.value || !selectedCourse.value.id)) {
     Message.error('课时信息不完整')
     return
   }
-  
+
   console.log('提交预约数据，会员卡ID:', reservationForm.cardId, '类型:', typeof reservationForm.cardId)
-  
+
   // 确保 ID 是数字类型
   const studentId = typeof reservationForm.studentId === 'string' ? parseInt(reservationForm.studentId, 10) : reservationForm.studentId;
-  
+
   // 确保会员卡ID是有效的数字
   let stuCardId: number;
   try {
@@ -1586,9 +1917,46 @@ const handleStudentReservationOk = () => {
     Message.error('会员卡ID无效，请重新选择会员卡');
     return;
   }
-  
+
   console.log('转换后的会员卡ID:', stuCardId, '类型:', typeof stuCardId);
-  
+
+  // 如果是编辑模式，调用更新API
+  if (isEditBookingMode.value && editingBookingId.value) {
+    const updateData = {
+      accountId: stuCardId,
+      materialId: reservationForm.materialId ? (typeof reservationForm.materialId === 'string' ? parseInt(reservationForm.materialId, 10) : reservationForm.materialId) : null,
+      lessonId: reservationForm.lessonId ? (typeof reservationForm.lessonId === 'string' ? parseInt(reservationForm.lessonId, 10) : reservationForm.lessonId) : null,
+      remark: reservationForm.remark
+    }
+
+    console.log('发送更新预约请求数据:', updateData)
+
+    updateBookingInfo(editingBookingId.value, updateData)
+      .then(res => {
+        console.log('更新预约响应:', res)
+        Message.success('修改成功')
+        studentReservationVisible.value = false
+        isEditBookingMode.value = false
+        editingBookingId.value = null
+
+        // 刷新课时数据
+        loadCourseData()
+
+        // 关闭课时详情弹窗
+        courseDetailVisible.value = false
+      })
+      .catch(error => {
+        console.error('修改预约失败:', error)
+        if (error.response && error.response.data && error.response.data.msg) {
+          Message.error('修改失败: ' + error.response.data.msg)
+        } else {
+          Message.error('修改失败: ' + (error.message || '未知错误'))
+        }
+      })
+    return
+  }
+
+  // 新增预约模式
   // 构建请求数据
   const requestData = {
     slotId: selectedCourse.value.id,
@@ -1600,20 +1968,29 @@ const handleStudentReservationOk = () => {
     teacherId: selectedCourse.value.teacherId,
     createUser: 1 // 添加创建人ID，这里使用默认值1
   }
-  
+
   console.log('发送预约请求数据:', requestData)
-  
+
   // 调用创建预约API
   createReservation(requestData)
     .then(res => {
       console.log('预约响应:', res)
       if (res.success) {
         Message.success('预约成功')
+
+        // 缓存当前预约的会员ID和手机号，供下次预约时使用
+        if (reservationForm.studentId && selectedMember.value) {
+          localStorage.setItem('lastReservationStudentId', String(reservationForm.studentId))
+          if (selectedMember.value.phone) {
+            localStorage.setItem('lastReservationMemberPhone', selectedMember.value.phone)
+          }
+        }
+
         studentReservationVisible.value = false
-        
+
         // 刷新课时数据
         loadCourseData()
-        
+
         // 关闭课时详情弹窗
         courseDetailVisible.value = false
       } else {
@@ -1632,9 +2009,97 @@ const handleStudentReservationOk = () => {
     })
 }
 
+// 打开编辑预约弹窗
+const handleEditBooking = (booking: any) => {
+  console.log('=== 打开编辑预约弹窗 ===')
+  console.log('booking对象:', booking)
+  console.log('booking的所有属性:', Object.keys(booking))
+  console.log('booking.id:', booking?.id)
+  console.log('booking.bookingId:', booking?.bookingId)
+
+  if (!booking) {
+    Message.error('预约信息不存在')
+    return
+  }
+
+  // 尝试从不同的字段获取预约ID
+  const bookingId = booking.id || booking.bookingId
+
+  if (!bookingId) {
+    Message.error('预约ID不存在，无法编辑')
+    console.error('booking对象缺少id字段:', booking)
+    return
+  }
+
+  // 设置为编辑模式
+  isEditBookingMode.value = true
+  editingBookingId.value = String(bookingId)  // 确保转换为字符串
+
+  console.log('设置编辑模式: isEditBookingMode =', isEditBookingMode.value)
+  console.log('设置预约ID: editingBookingId =', editingBookingId.value)
+
+  // 填充表单数据
+  Object.assign(reservationForm, {
+    studentId: booking.studentId,
+    cardId: booking.accountId || '',
+    materialId: booking.materialId || null,
+    lessonId: booking.lessonId || null,
+    remark: booking.remark || ''
+  })
+
+  // 设置选中的会员
+  selectedMember.value = {
+    id: booking.studentId,
+    name: booking.studentName,
+    phone: booking.studentPhone
+  }
+  searchedMembers.value = [selectedMember.value]
+
+  // 加载教材列表
+  loadMaterials()
+
+  // 如果有教材ID，加载对应的课节列表
+  if (booking.materialId) {
+    // 使用 onMaterialChange 加载课节，但不清空 lessonId
+    const currentLessonId = booking.lessonId
+    listLessonsByMaterialId(String(booking.materialId))
+      .then(res => {
+        if (res && res.data) {
+          const data = res.data as any
+          let lessons = Array.isArray(data) ? data : (data.list || [])
+          // 按照课节名称（教材名字）排序
+          lessons = lessons.sort((a: any, b: any) => {
+            const nameA = (a.name || '').toString()
+            const nameB = (b.name || '').toString()
+            return nameA.localeCompare(nameB, 'zh-CN', { numeric: true, sensitivity: 'base' })
+          })
+          materialLessons.value = lessons
+          // 恢复 lessonId
+          reservationForm.lessonId = currentLessonId
+        } else {
+          materialLessons.value = []
+        }
+      })
+      .catch(() => {
+        materialLessons.value = []
+      })
+  }
+
+  // 加载会员卡列表
+  if (booking.studentId) {
+    loadMemberCards(booking.studentId)
+  }
+
+  // 显示弹窗
+  studentReservationVisible.value = true
+}
+
 // 取消预约
 const handleStudentReservationCancel = () => {
   studentReservationVisible.value = false
+  // 重置编辑模式标识
+  isEditBookingMode.value = false
+  editingBookingId.value = null
 }
 
 // 删除课时
@@ -1806,9 +2271,17 @@ const handleDeleteCourse = () => {
     padding: 10px 0 6px 0;
     text-align: center;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
+    position: relative;
+
+    .weekday-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     .weekday-name {
       font-weight: 700;
@@ -1819,6 +2292,29 @@ const handleDeleteCourse = () => {
     .date-label {
       color: var(--color-text-3);
       font-size: 13px;
+    }
+
+    .booked-count {
+      color: var(--color-text-3);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    &.is-today {
+      .weekday-name,
+      .date-label {
+        color: #ff4d4f;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #faad14;
+      }
     }
   }
 }
@@ -2017,6 +2513,9 @@ const handleDeleteCourse = () => {
     .student-count {
       font-size: 14px;
       color: var(--color-text-3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
   }
   .detail-actions {

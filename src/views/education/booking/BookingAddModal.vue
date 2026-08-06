@@ -20,7 +20,7 @@
       <a-form-item label="课节">
         <a-select v-model="form.lessonId" placeholder="请先选择教材" :disabled="!materialLessons.length" allow-clear>
           <a-option v-for="l in materialLessons" :key="l.id" :value="l.id">
-            {{ l.lessonName }}
+            {{ l.name }}
           </a-option>
         </a-select>
       </a-form-item>
@@ -35,8 +35,7 @@
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getBooking, updateBooking } from '@/apis/education/booking'
-import { listMaterial } from '@/apis/education/material'
-import { listMaterialLessonsByMaterialId } from '@/apis/education/materialLesson'
+import { listMaterial, listLessonsByMaterialId } from '@/apis/education/material'
 
 const emit = defineEmits<{
   (e: 'save-success'): void
@@ -69,7 +68,7 @@ const onMaterialChange = (id: any) => {
   form.lessonId = null
   materialLessons.value = []
   if (!id) return
-  listMaterialLessonsByMaterialId(String(id))
+  listLessonsByMaterialId(String(id))
     .then(res => {
       const data = res?.data as any
       materialLessons.value = Array.isArray(data) ? data : (data?.list || [])

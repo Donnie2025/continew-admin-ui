@@ -47,7 +47,7 @@
         @page-size-change="onPageSizeChange"
       >
         <template #columns>
-          <a-table-column title="课节名字" data-index="lessonName" :width="280" />
+          <a-table-column title="课节名字" data-index="name" :width="280" />
           <a-table-column title="课节链接" data-index="lessonUrl" :width="360">
             <template #cell="{ record }">
               <div v-if="record.lessonUrl">
@@ -113,11 +113,11 @@ import { Message, Modal } from '@arco-design/web-vue'
 import MaterialLessonAddModal from '@/views/education/materialLesson/MaterialLessonAddModal.vue'
 import MaterialLessonImportModal from '@/views/education/materialLesson/MaterialLessonImportModal.vue'
 import {
-  type MaterialLessonResp,
-  type MaterialLessonPageQuery,
-  listMaterialLesson,
-  deleteMaterialLesson
-} from '@/apis/education/materialLesson'
+  type MaterialResp,
+  type MaterialPageQuery,
+  listMaterial,
+  deleteMaterial
+} from '@/apis/education/material'
 
 defineOptions({ name: 'MaterialLessonModal' })
 
@@ -125,7 +125,7 @@ const visible = ref(false)
 const materialId = ref('')
 const materialName = ref('')
 const loading = ref(false)
-const dataList = ref<MaterialLessonResp[]>([])
+const dataList = ref<MaterialResp[]>([])
 
 const queryForm = reactive({
   lessonName: undefined as string | undefined
@@ -143,13 +143,14 @@ const load = async () => {
   if (!materialId.value) return
   loading.value = true
   try {
-    const { data } = await listMaterialLesson({
-      materialId: materialId.value,
-      lessonName: queryForm.lessonName,
+    const { data } = await listMaterial({
+      pid: materialId.value,
+      type: 'LESSON',
+      name: queryForm.lessonName,
       page: pagination.current,
       size: pagination.pageSize,
       sort: ['id,asc']
-    } as MaterialLessonPageQuery)
+    } as MaterialPageQuery)
     dataList.value = data.list || []
     pagination.total = data.total || 0
   } catch (e) {
@@ -177,13 +178,13 @@ const onPageSizeChange = (size: number) => {
 }
 
 // 删除
-const onDelete = (record: MaterialLessonResp) => {
+const onDelete = (record: MaterialResp) => {
   Modal.confirm({
     title: '确认删除',
-    content: `是否确定删除课节「${record.lessonName}」？`,
+    content: `是否确定删除课节「${record.name}」？`,
     onOk: async () => {
       try {
-        await deleteMaterialLesson(record.id)
+        await deleteMaterial(record.id)
         Message.success('删除成功')
         load()
       } catch {
