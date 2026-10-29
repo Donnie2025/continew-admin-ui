@@ -727,7 +727,7 @@ const onBatchAddLesson = async () => {
     startTime: formatDefaultTime(nextHour),
     durationHours: isLizheAgent ? 3 : 0, // lizhe 代理默认3小时
     durationMinutes: isLizheAgent ? 0 : 25, // lizhe 代理默认0分钟（整3小时）
-    seatNum: isLizheAgent ? 12 : 1, // lizhe 代理默认1对12
+    seatNum: isLizheAgent ? 6 : 1, // lizhe 代理默认1对12
     teacherId: '',
     teacherName: '',
     recordState: isLizheAgent ? 1 : 0, // lizhe 代理默认录制

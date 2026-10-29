@@ -47,6 +47,8 @@ export interface TransactionDetailResp {
 }
 export interface TransactionQuery {
   studentId: string | undefined
+  userId: string | undefined
+  userType: string | undefined
   cardId: string | undefined
   type: string | undefined
   sort: Array<string>

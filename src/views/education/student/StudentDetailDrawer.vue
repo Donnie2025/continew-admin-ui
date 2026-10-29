@@ -951,7 +951,8 @@ const getAccountInfo = async () => {
 const getTransactionList = async () => {
   try {
     const { data } = await listTransaction({
-      studentId: dataId.value,
+      userId: dataId.value,
+      userType: 'student',
       cardId: undefined,
       type: undefined,
       sort: ['id,desc'],
