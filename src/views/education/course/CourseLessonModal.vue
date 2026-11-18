@@ -721,13 +721,14 @@ const onBatchAddLesson = async () => {
 
   // 根据 agentCode 设置默认值
   const isLizheAgent = courseAgentCode.value === 'lizhe'
+  const isLizheOrYouyanAgent = ['lizhe', 'youyan'].includes(courseAgentCode.value)
 
   lessonForm.value = {
     name: courseName.value, // 默认填充班级名称
     startTime: formatDefaultTime(nextHour),
     durationHours: isLizheAgent ? 3 : 0, // lizhe 代理默认3小时
     durationMinutes: isLizheAgent ? 0 : 25, // lizhe 代理默认0分钟（整3小时）
-    seatNum: isLizheAgent ? 6 : 1, // lizhe 代理默认1对12
+    seatNum: isLizheOrYouyanAgent ? 6 : 1, // lizhe/youyan 代理默认1对6
     teacherId: '',
     teacherName: '',
     recordState: isLizheAgent ? 1 : 0, // lizhe 代理默认录制

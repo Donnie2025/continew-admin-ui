@@ -13,7 +13,8 @@
       @refresh="search"
     >
       <template #toolbar-left>
-	    <a-input-search v-model="queryForm.name" placeholder="请输入教室名称" allow-clear @search="search" />
+	    <a-input-search v-model="queryForm.name" placeholder="请输入教室名称" allow-clear @search="search" @press-enter="search" />
+	    <a-input-search v-model="queryForm.teacherName" placeholder="请输入教师名称" allow-clear @search="search" @press-enter="search" />
         <a-button @click="reset">
           <template #icon><icon-refresh /></template>
           <template #default>重置</template>
@@ -150,6 +151,7 @@ onMounted(() => {
 
 const queryForm = reactive<CourseQuery>({
   name: undefined,
+  teacherName: undefined,
   mainTeacherId: undefined,
   institutionId: undefined,
   sort: ['id,desc']
@@ -161,7 +163,13 @@ const {
   pagination,
   search,
   handleDelete
-} = useTable((page) => listCourse({ ...queryForm, ...page }), { immediate: false })
+} = useTable((page) => listCourse({ ...queryForm, ...page }), {
+  immediate: false,
+  paginationOption: {
+    defaultPageSize: 20,
+    defaultSizeOptions: [10, 20, 30, 40, 50]
+  }
+})
 const columns: TableInstance['columns'] = [
   { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200 },
   { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 100 },
@@ -183,6 +191,7 @@ const columns: TableInstance['columns'] = [
 // 重置
 const reset = () => {
   queryForm.name = undefined
+  queryForm.teacherName = undefined
   queryForm.mainTeacherId = undefined
   queryForm.institutionId = undefined
   search()

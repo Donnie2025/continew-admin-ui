@@ -53,6 +53,7 @@ import { ref, computed, reactive, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useWindowSize } from '@vueuse/core'
 import { getTeacher, addTeacher, updateTeacher } from '@/apis/education/teacher'
+import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { type ColumnItem, GiForm } from '@/components/GiForm'
 import { useResetReactive } from '@/hooks'
 import { useDict } from '@/hooks/app'
@@ -72,6 +73,8 @@ const title = computed(() => (isUpdate.value ? '修改教师' : '新增教师'))
 const formRef = ref<InstanceType<typeof GiForm>>()
 const { sex_type,is_show,is_fixed,status } = useDict('sex_type','is_show','is_fixed','status')
 const uploadFile = ref()
+const agentOptions = ref<AgentOption[]>([])
+listAgentOptions().then(res => { agentOptions.value = res.data })
 
 const [form, resetForm] = useResetReactive({
   isShow: '1',
@@ -213,6 +216,20 @@ const columns: ColumnItem[] = reactive([
     field: 'email',
     type: 'input',
     span: 24,
+  },
+  {
+    label: '代理商',
+    field: 'agentCodes',
+    type: 'select',
+    span: 24,
+    props: {
+      options: agentOptions,
+      fieldNames: { value: 'code', label: 'name' },
+      allowClear: true,
+      allowSearch: true,
+      multiple: true,
+      placeholder: '请选择代理商（可多选）'
+    },
   },
   {
     label: '所属组',

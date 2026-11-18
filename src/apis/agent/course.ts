@@ -83,6 +83,7 @@ export interface CourseStudentReq {
 
 export interface CourseQuery {
   name?: string
+  teacherName?: string
   agentCode?: string
   mainTeacherId?: string
   institutionId?: string

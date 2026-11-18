@@ -76,6 +76,30 @@ export interface CourseStudentReq {
   courseId: string
   studentIds: string[]
 }
+
+export interface CourseScheduleResp {
+  id: string
+  courseId: string
+  teacherId: string
+  teacherName: string
+  weekDay: number
+  startTime: string
+  durationMinutes: number
+  enableRecording: number
+  onStage?: number
+  remark?: string
+}
+
+export interface CourseScheduleReq {
+  courseId: string
+  teacherId: string
+  weekDay: number
+  startTime: string
+  durationMinutes: number
+  enableRecording?: number
+  onStage?: number
+  remark?: string
+}
 export interface CourseQuery {
   name: string | undefined
   agentCode: string | undefined
@@ -143,4 +167,91 @@ export function removeStudentFromCourse(courseId: string, studentId: string) {
 /** @desc 获取班级的学生列表 */
 export function listCourseStudents(courseId: string) {
   return http.get<CourseStudentResp[]>(`${BASE_URL}/student/${courseId}`)
+}
+
+/** @desc 获取班级的固定课时间列表 */
+export function listCourseSchedules(courseId: string) {
+  return http.get<CourseScheduleResp[]>(`${BASE_URL}/schedule/${courseId}`)
+}
+
+/** @desc 获取固定课时间详情 */
+export function getCourseSchedule(id: string) {
+  return http.get<CourseScheduleResp>(`${BASE_URL}/schedule/detail/${id}`)
+}
+
+/** @desc 创建固定课时间 */
+export function createCourseSchedule(data: CourseScheduleReq) {
+  return http.post<string>(`${BASE_URL}/schedule`, data)
+}
+
+/** @desc 更新固定课时间 */
+export function updateCourseSchedule(id: string, data: CourseScheduleReq) {
+  return http.put(`${BASE_URL}/schedule/${id}`, data)
+}
+
+/** @desc 删除固定课时间 */
+export function deleteCourseSchedule(id: string) {
+  return http.del(`${BASE_URL}/schedule/${id}`)
+}
+
+/** @desc 批量删除固定课时间 */
+export function deleteCourseScheduleBatch(ids: string[]) {
+  return http.del(`${BASE_URL}/schedule/batch`, { ids })
+}
+
+export interface BatchScheduleReq {
+  courseIds: string[]
+  startDate: string
+  weekCount: number
+  checkConflict?: boolean
+}
+
+export interface ConflictInfo {
+  courseId: string
+  courseName: string
+  scheduleId: string
+  conflictTime: string
+  conflictReason: string
+  teacherName: string
+}
+
+export interface LessonSummary {
+  lessonId: string
+  courseName: string
+  teacherName: string
+  startTime: string
+  lessonName: string
+}
+
+export interface BatchScheduleResp {
+  successCount: number
+  failCount: number
+  totalSchedules: number
+  conflictLessons: ConflictInfo[]
+  createdLessons: LessonSummary[]
+}
+
+export interface CheckScheduleResp {
+  totalLessons: number
+  scheduledCount: number
+  unscheduledCount: number
+  lessons: CheckScheduleItem[]
+}
+
+export interface CheckScheduleItem {
+  courseName: string
+  startTime: string
+  isScheduled: boolean
+  lessonName?: string
+  teacherName?: string
+}
+
+/** @desc 批量排课 */
+export function batchScheduleCourse(data: BatchScheduleReq) {
+  return http.post<BatchScheduleResp>(`${BASE_URL}/batch-schedule`, data)
+}
+
+/** @desc 检查排课状态 */
+export function checkScheduleStatus(data: BatchScheduleReq) {
+  return http.post<CheckScheduleResp>(`${BASE_URL}/check-schedule`, data)
 }

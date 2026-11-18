@@ -1,6 +1,7 @@
 <template>
   <div class="gi_table_page">
     <GiTable
+      v-model:selectedKeys="selectedRowKeys"
       title="班级管理"
       row-key="id"
       :data="dataList"
@@ -8,6 +9,7 @@
       :loading="loading"
       :scroll="{ x: '100%', y: '100%', minWidth: 1000 }"
       :pagination="pagination"
+      :row-selection="rowSelection"
       :disabled-tools="['size']"
       :disabled-column-keys="['name']"
       @refresh="search"
@@ -28,6 +30,10 @@
           <template #icon><icon-plus /></template>
           <template #default>新增</template>
         </a-button>
+        <a-button type="primary" status="success" @click="onBatchSchedule">
+          <template #icon><icon-calendar /></template>
+          <template #default>批量排课</template>
+        </a-button>
         <a-button v-permission="['education:course:export']" @click="onExport">
           <template #icon><icon-download /></template>
           <template #default>导出</template>
@@ -38,70 +44,82 @@
         <span v-else style="color: #999">未设置</span>
       </template>
       <template #teacherCount="{ record }">
-        <template v-if="record.teacherCount && record.teacherCount > 0">
-          <template v-if="record.teacherCount < 5">
-            <div class="name-list">
-              <span v-for="(teacher, index) in record.teachers" :key="teacher.teacherId" class="name-item">
-                {{ teacher.teacherName }}<span v-if="index < record.teachers.length - 1">、</span>
-              </span>
-            </div>
-          </template>
-          <a-tooltip v-else position="right">
-            <span class="count-cell count-cell-active">{{ record.teacherCount }}</span>
-            <template #content>
-              <div class="tooltip-content">
-                <div class="tooltip-header">教师列表 ({{ record.teacherCount }})</div>
-                <div v-for="teacher in record.teachers" :key="teacher.teacherId" class="tooltip-item">
-                  <a-avatar :size="24" style="margin-right: 8px">
-                    <icon-user />
-                  </a-avatar>
-                  <div class="tooltip-info">
-                    <div class="tooltip-name">{{ teacher.teacherName }}</div>
-                    <div class="tooltip-detail">{{ teacher.teacherPhone || teacher.teacherEmail || '-' }}</div>
-                  </div>
-                </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <template v-if="record.teacherCount && record.teacherCount > 0">
+            <template v-if="record.teacherCount < 5">
+              <div class="name-list">
+                <span v-for="(teacher, index) in record.teachers" :key="teacher.teacherId" class="name-item">
+                  {{ teacher.teacherName }}<span v-if="index < record.teachers.length - 1">、</span>
+                </span>
               </div>
             </template>
-          </a-tooltip>
-        </template>
-        <span v-else class="count-cell">--</span>
+            <a-tooltip v-else position="right">
+              <span class="count-cell count-cell-active">{{ record.teacherCount }}</span>
+              <template #content>
+                <div class="tooltip-content">
+                  <div class="tooltip-header">教师列表 ({{ record.teacherCount }})</div>
+                  <div v-for="teacher in record.teachers" :key="teacher.teacherId" class="tooltip-item">
+                    <a-avatar :size="24" style="margin-right: 8px">
+                      <icon-user />
+                    </a-avatar>
+                    <div class="tooltip-info">
+                      <div class="tooltip-name">{{ teacher.teacherName }}</div>
+                      <div class="tooltip-detail">{{ teacher.teacherPhone || teacher.teacherEmail || '-' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </a-tooltip>
+          </template>
+          <span v-else class="count-cell">--</span>
+          <a-link title="关联老师" @click="onManageTeachers(record)" style="flex-shrink: 0;">关联</a-link>
+        </div>
       </template>
       <template #studentCount="{ record }">
-        <template v-if="record.studentCount && record.studentCount > 0">
-          <template v-if="record.studentCount < 7">
-            <div class="name-list">
-              <span v-for="(student, index) in record.students" :key="student.studentId" class="name-item">
-                {{ student.studentName }}<span v-if="index < record.students.length - 1">、</span>
-              </span>
-            </div>
-          </template>
-          <a-tooltip v-else position="right">
-            <span class="count-cell count-cell-active">{{ record.studentCount }}</span>
-            <template #content>
-              <div class="tooltip-content">
-                <div class="tooltip-header">学生列表 ({{ record.studentCount }})</div>
-                <div v-for="student in record.students" :key="student.studentId" class="tooltip-item">
-                  <a-avatar :size="24" style="margin-right: 8px">
-                    <icon-user />
-                  </a-avatar>
-                  <div class="tooltip-info">
-                    <div class="tooltip-name">{{ student.studentName }}</div>
-                    <div class="tooltip-detail">{{ student.studentPhone || student.studentEmail || '-' }}</div>
-                  </div>
-                </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <template v-if="record.studentCount && record.studentCount > 0">
+            <template v-if="record.studentCount < 7">
+              <div class="name-list">
+                <span v-for="(student, index) in record.students" :key="student.studentId" class="name-item">
+                  {{ student.studentName }}<span v-if="index < record.students.length - 1">、</span>
+                </span>
               </div>
             </template>
-          </a-tooltip>
-        </template>
-        <span v-else class="count-cell">--</span>
+            <a-tooltip v-else position="right">
+              <span class="count-cell count-cell-active">{{ record.studentCount }}</span>
+              <template #content>
+                <div class="tooltip-content">
+                  <div class="tooltip-header">学生列表 ({{ record.studentCount }})</div>
+                  <div v-for="student in record.students" :key="student.studentId" class="tooltip-item">
+                    <a-avatar :size="24" style="margin-right: 8px">
+                      <icon-user />
+                    </a-avatar>
+                    <div class="tooltip-info">
+                      <div class="tooltip-name">{{ student.studentName }}</div>
+                      <div class="tooltip-detail">{{ student.studentPhone || student.studentEmail || '-' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </a-tooltip>
+          </template>
+          <span v-else class="count-cell">--</span>
+          <a-link title="关联学生" @click="onManageStudents(record)" style="flex-shrink: 0;">关联</a-link>
+        </div>
+      </template>
+      <template #schedules="{ record }">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span v-if="record.schedules && record.schedules.length > 0" style="font-size: 13px;">
+            {{ formatSchedules(record.schedules) }}
+          </span>
+          <span v-else style="color: #999;">未设置</span>
+        </div>
       </template>
       <template #action="{ record }">
         <a-space>
-          <a-link v-permission="['education:course:get']" title="详情" @click="onDetail(record)">详情</a-link>
           <a-link v-permission="['education:course:update']" title="修改" @click="onUpdate(record)">修改</a-link>
-          <a-link title="关联老师" @click="onManageTeachers(record)">关联老师</a-link>
-          <a-link title="关联学生" @click="onManageStudents(record)">关联学生</a-link>
-          <a-link title="管理课节" @click="onManageLessons(record)">管理课节</a-link>
+          <a-link title="课节" @click="onManageLessons(record)">课节</a-link>
+          <a-link title="固定" @click="onManageSchedules(record)">固定</a-link>
           <a-link
             v-permission="['education:course:delete']"
             status="danger"
@@ -120,6 +138,8 @@
     <CourseTeacherModal ref="CourseTeacherModalRef" @save-success="search" />
     <CourseStudentModal ref="CourseStudentModalRef" @save-success="search" />
     <CourseLessonModal ref="CourseLessonModalRef" @save-success="search" />
+    <CourseScheduleModal ref="CourseScheduleModalRef" @save-success="search" />
+    <BatchScheduleModal ref="BatchScheduleModalRef" @save-success="search" />
 
   </div>
 </template>
@@ -131,6 +151,8 @@ import CourseDetailDrawer from './CourseDetailDrawer.vue'
 import CourseTeacherModal from './CourseTeacherModal.vue'
 import CourseStudentModal from './CourseStudentModal.vue'
 import CourseLessonModal from './CourseLessonModal.vue'
+import CourseScheduleModal from './CourseScheduleModal.vue'
+import BatchScheduleModal from './BatchScheduleModal.vue'
 import { type CourseResp, type CourseQuery, deleteCourse, exportCourse, listCourse, listCourseTeachers, listCourseStudents } from '@/apis/education/course'
 import { type AgentOption, listAgentOptions } from '@/apis/education/agent'
 import { useDownload, useTable } from '@/hooks'
@@ -168,17 +190,18 @@ const columns: TableInstance['columns'] = [
   { title: '班级名称', dataIndex: 'name', slotName: 'name', width: 200, align: 'center' },
   { title: '班主任', dataIndex: 'mainTeacherName', slotName: 'mainTeacherName', width: 80,align: 'center' },
   // { title: '所属机构', dataIndex: 'institutionName', slotName: 'institutionName', width: 80,align: 'center' },
-  { title: '教师', dataIndex: 'teacherCount', slotName: 'teacherCount', width: 100 },
-  { title: '班级学生', dataIndex: 'studentCount', slotName: 'studentCount', width: 180},
+  { title: '教师', dataIndex: 'teacherCount', slotName: 'teacherCount', width: 150 },
+  { title: '班级学生', dataIndex: 'studentCount', slotName: 'studentCount', width: 200},
+  { title: '固定时间', dataIndex: 'schedules', slotName: 'schedules', width: 180, ellipsis: true, tooltip: true },
   { title: '备注', dataIndex: 'remark', slotName: 'remark', width: 100 ,ellipsis: true, tooltip: true},
   {
     title: '操作',
     dataIndex: 'action',
     slotName: 'action',
-    width: 300,
+    width: 200,
     align: 'center',
     fixed: !isMobile() ? 'right' : undefined,
-    show: has.hasPermOr(['education:course:get', 'education:course:update', 'education:course:delete'])
+    show: has.hasPermOr(['education:course:update', 'education:course:delete'])
   }
 ]
 
@@ -237,6 +260,68 @@ const CourseLessonModalRef = ref<InstanceType<typeof CourseLessonModal>>()
 // 管理课节
 const onManageLessons = (record: CourseResp) => {
   CourseLessonModalRef.value?.onOpen(record.id, record.name)
+}
+
+const CourseScheduleModalRef = ref<InstanceType<typeof CourseScheduleModal>>()
+// 管理固定时间
+const onManageSchedules = (record: CourseResp) => {
+  CourseScheduleModalRef.value?.onOpen(record.id, record.name)
+}
+
+// 表格行选择
+const selectedRowKeys = ref<string[]>([])
+const rowSelection = reactive({
+  type: 'checkbox',
+  showCheckedAll: true,
+  onlyCurrent: false
+})
+
+const BatchScheduleModalRef = ref<InstanceType<typeof BatchScheduleModal>>()
+// 批量排课
+const onBatchSchedule = () => {
+  console.log('批量排课按钮被点击')
+  console.log('BatchScheduleModalRef:', BatchScheduleModalRef.value)
+  console.log('selectedRowKeys:', selectedRowKeys.value)
+
+  if (!BatchScheduleModalRef.value) {
+    console.error('BatchScheduleModalRef 未定义')
+    return
+  }
+
+  BatchScheduleModalRef.value?.open(selectedRowKeys.value)
+}
+
+// 格式化固定时间显示
+const formatSchedules = (schedules: any[]) => {
+  if (!schedules || schedules.length === 0) {
+    return '未设置'
+  }
+
+  const weekDayMap: { [key: number]: string } = {
+    1: '周一',
+    2: '周二',
+    3: '周三',
+    4: '周四',
+    5: '周五',
+    6: '周六',
+    7: '周日'
+  }
+
+  // 格式化每个时间段：周几 HH:mm
+  const scheduleTexts = schedules.map(schedule => {
+    const weekDayText = weekDayMap[schedule.weekDay] || `周${schedule.weekDay}`
+    // startTime 可能是 "HH:mm:ss" 或 "HH:mm" 格式，统一提取 HH:mm 部分
+    let timeText = ''
+    if (typeof schedule.startTime === 'string') {
+      // 提取 HH:mm 部分
+      timeText = schedule.startTime.substring(0, 5)
+    } else if (schedule.startTime) {
+      timeText = schedule.startTime
+    }
+    return `${weekDayText} ${timeText}`
+  })
+
+  return scheduleTexts.join('、')
 }
 
 </script>
